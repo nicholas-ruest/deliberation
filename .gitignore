@@ -1,0 +1,13 @@
+# Local ruflo / AgentDB state and installed skills
+.agents/
+.swarm/
+agentdb.rvf
+agentdb.rvf.lock
+ruvector.db
+skills-lock.json
+
+# Local Claude and claude-flow configuration/state
+.claude/
+.claude-flow/
+CLAUDE.md
+.mcp.json
