@@ -1,0 +1,131 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: deliberation-cell
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    deliberation.io/cell-id: CELL_ID_REQUIRED
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: deliberation-api
+  namespace: deliberation-cell
+  annotations:
+    deliberation.io/workload-identity: CELL_API_IDENTITY_REQUIRED
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: deliberation-worker
+  namespace: deliberation-cell
+  annotations:
+    deliberation.io/workload-identity: CELL_WORKER_IDENTITY_REQUIRED
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: deliberation-web
+  namespace: deliberation-cell
+  annotations:
+    deliberation.io/workload-identity: CELL_WEB_IDENTITY_REQUIRED
+automountServiceAccountToken: false
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: deliberation-cell
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-edge-ingress
+  namespace: deliberation-cell
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app, operator: In, values: [deliberation-api, deliberation-web] }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { deliberation.io/trusted-edge: "true" }
+      ports:
+        - { protocol: TCP, port: 3000 }
+        - { protocol: TCP, port: 3001 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: deliberation-cell
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-private-cell-dependencies
+  namespace: deliberation-cell
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              deliberation.io/cell-private-dependencies: CELL_ID_REQUIRED
+      ports:
+        - { protocol: TCP, port: 443 }
+        - { protocol: TCP, port: 5432 }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: deliberation-api
+  namespace: deliberation-cell
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels: { app: deliberation-api }
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: deliberation-api
+  namespace: deliberation-cell
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: deliberation-api }
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 65 }
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: cell-quota
+  namespace: deliberation-cell
+spec:
+  hard:
+    requests.cpu: "32"
+    requests.memory: 64Gi
+    limits.cpu: "64"
+    limits.memory: 128Gi

@@ -29,6 +29,13 @@ These proposed ADRs form one coherent production architecture. “Proposed” me
 | [ADR-023](./ADR-023-require-risk-tiered-human-oversight-and-safety-cases.md) | Risk-tiered oversight and safety cases |
 | [ADR-024](./ADR-024-make-enterprise-lifecycle-and-support-first-class.md) | Enterprise onboarding, administration, support, and exit |
 | [ADR-025](./ADR-025-guarantee-versioned-data-portability-and-interoperability.md) | Versioned data portability and interoperability |
+| [ADR-026](./ADR-026-run-production-as-regional-kubernetes-cells.md) | Regional Kubernetes production cells |
+| [ADR-027](./ADR-027-use-managed-postgresql-object-storage-and-kms.md) | Managed regional data plane |
+| [ADR-028](./ADR-028-use-a-managed-durable-workflow-and-queue-fabric.md) | Durable workflow and queue fabric |
+| [ADR-029](./ADR-029-establish-a-trusted-api-edge-and-workload-identity.md) | Trusted API edge and workload identity |
+| [ADR-030](./ADR-030-separate-build-attestation-from-release-authority.md) | Build attestation and release authority |
+| [ADR-031](./ADR-031-qualify-and-contain-external-production-dependencies.md) | External dependency qualification |
+| [ADR-032](./ADR-032-deliver-an-accessible-human-authority-web-application.md) | Accessible human-authority web application |
 
 ## Decision policy
 

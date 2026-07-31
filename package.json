@@ -29,6 +29,7 @@
     "dev": "tsx watch src/apps/api.ts",
     "start:api": "node dist/apps/api.js",
     "start:worker": "node dist/apps/worker.js"
+    ,"start:web": "node dist/apps/web.js"
   },
   "dependencies": {
     "@opentelemetry/api": "1.9.0",

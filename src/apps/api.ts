@@ -4,7 +4,8 @@ import { DecisionLaboratory, type LaboratoryInput } from '../platform/laboratory
 import { SystemClock } from '../shared/domain/index.js';
 
 const port = Number.parseInt(process.env['PORT'] ?? '3000', 10);
-const localDomainDemoEnabled = process.env['ALLOW_LOCAL_DOMAIN_DEMO'] === 'true';
+const localDomainDemoEnabled = process.env['ALLOW_LOCAL_DOMAIN_DEMO'] === 'true'
+  && process.env['NODE_ENV'] !== 'production';
 const laboratory = new DecisionLaboratory(new SystemClock());
 const Option = z.object({ id: z.string().min(1), title: z.string().min(1), description: z.string().optional() });
 const LaboratoryInputSchema = z.object({
@@ -149,7 +150,7 @@ function problem(
   }));
 }
 
-server.listen(port, '0.0.0.0');
+server.listen(port, localDomainDemoEnabled ? '127.0.0.1' : '0.0.0.0');
 
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.once(signal, () => {

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { DurableWorkflow, InMemoryWorkflowStore, type WorkflowStep } from '../../src/platform/workflows/index.js';
 import { BoundaryValidator, KillSwitchRegistry, SafeGeneratedText } from '../../src/platform/security/index.js';
-import { ConnectorGateway } from '../../src/integrations/application/index.js';
+import { ConnectorGateway, allowTestDependencies } from '../../src/integrations/application/index.js';
 import { ConnectorRegistration } from '../../src/integrations/domain/index.js';
 import { FixedClock } from '../../src/shared/domain/index.js';
 import { ModelGateway } from '../../src/platform/model-gateway/index.js';
@@ -65,7 +65,7 @@ describe('adversarial provider and connector paths', () => {
     registered.value.approve('read', 'v2', 'admin', clock.now());
     let release!: (value: unknown) => void;
     const pending = new Promise((resolve) => { release = resolve; });
-    const gateway = new ConnectorGateway(registered.value, { call: async () => pending });
+    const gateway = new ConnectorGateway(registered.value, { call: async () => pending }, allowTestDependencies);
     const invocation = gateway.invoke({
       tenantId: 't', capability: 'read', schemaHash: 'v2', capabilityClass: 'read',
       targetHost: 'api.example', purpose: 'evidence', input: {},
@@ -89,7 +89,7 @@ describe('adversarial provider and connector paths', () => {
       }],
     }, new Map([['p', {
       invoke: async () => ({ output: 'bad', usage: { inputTokens: 1, outputTokens: 1, costMinorUnits: 1 }, providerRequestId: 'id' }),
-    }]]));
+    }]]), allowTestDependencies);
     expect((await gateway.invoke(request, z.object({ value: z.string() }))).ok).toBe(false);
     expect(new KillSwitchRegistry().decide('model-provider', 'p').allowed).toBe(true);
   });

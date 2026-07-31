@@ -1,6 +1,23 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import type { Result } from '../../shared/domain/result.js';
+import type { DomainError, Result } from '../../shared/domain/result.js';
+
+export interface ModelDependencyEligibility {
+  authorize(use: {
+    readonly dependencyId: string;
+    readonly immutableVersion: string;
+    readonly region: string;
+    readonly dataClass: string;
+    readonly purpose: string;
+    readonly driftFingerprint: string;
+  }): Result<unknown, DomainError>;
+  generation(dependencyId: string): number;
+}
+
+const denyUnqualifiedModelDependencies: ModelDependencyEligibility = {
+  authorize: () => ({ ok: false, error: { code: 'DEPENDENCY_UNAVAILABLE', message: 'Production dependency catalog is required' } }),
+  generation: () => 0,
+};
 
 export type ModelTask = 'generation' | 'embedding' | 'reranking' | 'structured-evaluation';
 export type ModelRiskTier = 'low' | 'moderate' | 'high' | 'prohibited';
@@ -36,6 +53,8 @@ export interface ModelRequest {
   readonly evidenceManifest: readonly string[];
   readonly toolManifest: readonly string[];
   readonly safetyConfigurationHash: string;
+  readonly dataClass?: string;
+  readonly dependencyDriftFingerprint?: string;
 }
 
 export interface ModelProviderResponse {
@@ -73,6 +92,7 @@ export class ModelGateway {
   constructor(
     private readonly policy: RoutingPolicy,
     private readonly providers: ReadonlyMap<string, ModelProviderPort>,
+    private readonly eligibility: ModelDependencyEligibility = denyUnqualifiedModelDependencies,
   ) {}
 
   route(request: ModelRequest): Result<ModelRoute> {
@@ -94,9 +114,27 @@ export class ModelGateway {
     if (/^(latest|stable|default)$/i.test(routed.value.immutableModelId)) {
       return { ok: false, error: { code: 'INVARIANT_VIOLATION', message: 'Mutable model aliases are forbidden' } };
     }
+    const dependencyUse = {
+        dependencyId: routed.value.providerId,
+        immutableVersion: routed.value.immutableModelId,
+        region: request.region,
+        dataClass: request.dataClass ?? (request.containsRestrictedData ? 'restricted' : 'internal'),
+        purpose: request.task,
+        driftFingerprint: request.dependencyDriftFingerprint ?? '',
+    };
+    const generation = this.eligibility.generation(routed.value.providerId);
+    const qualified = this.eligibility.authorize(dependencyUse);
+    if (!qualified.ok) return { ok: false, error: qualified.error };
     const provider = this.providers.get(routed.value.providerId);
     if (provider === undefined) return { ok: false, error: { code: 'DEPENDENCY_UNAVAILABLE', message: 'Provider unavailable', retryable: true } };
     const response = await provider.invoke(routed.value.immutableModelId, request);
+    const requalified = this.eligibility.authorize(dependencyUse);
+    if (!requalified.ok || this.eligibility.generation(routed.value.providerId) !== generation) {
+      return { ok: false, error: { code: 'DEPENDENCY_UNAVAILABLE', message: 'Provider result fenced by qualification change' } };
+    }
+    if (response.usage.costMinorUnits > request.maximumCostMinorUnits) {
+      return { ok: false, error: { code: 'QUOTA_EXHAUSTED', message: 'Provider exceeded approved cost ceiling' } };
+    }
     const parsed = outputSchema.safeParse(response.output);
     if (!parsed.success) return { ok: false, error: { code: 'CONTENT_REJECTED', message: 'Provider output failed schema validation' } };
     return {

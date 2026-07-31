@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { FixedClock } from '../../src/shared/domain/index.js';
 import { Entitlement } from '../../src/commercial-operations/domain/index.js';
 import { ConnectorRegistration } from '../../src/integrations/domain/index.js';
-import { ConnectorGateway } from '../../src/integrations/application/index.js';
+import { ConnectorGateway, allowTestDependencies } from '../../src/integrations/application/index.js';
 import { ModelGateway } from '../../src/platform/model-gateway/index.js';
 
 const clock = new FixedClock(new Date('2026-01-01T00:00:00Z'));
@@ -33,7 +33,7 @@ describe('connector and model gateways', () => {
     if (!registered.ok) return;
     registered.value.discover({ name: 'create', schemaHash: 'schema-1', capabilityClass: 'write' });
     registered.value.approve('create', 'schema-1', 'admin', clock.now());
-    const gateway = new ConnectorGateway(registered.value, { call: async () => ({ id: 'remote' }) });
+    const gateway = new ConnectorGateway(registered.value, { call: async () => ({ id: 'remote' }) }, allowTestDependencies);
     const result = await gateway.invoke({
       tenantId: 'tenant', capability: 'create', schemaHash: 'schema-1', capabilityClass: 'write',
       targetHost: 'api.example', purpose: 'approved-action', input: {},
@@ -52,7 +52,7 @@ describe('connector and model gateways', () => {
       }],
     }, new Map([['fake', {
       invoke: async () => ({ output: { answer: 'ok' }, usage: { inputTokens: 1, outputTokens: 1, costMinorUnits: 1 }, providerRequestId: 'request' }),
-    }]]));
+    }]]), allowTestDependencies);
     const result = await gateway.invoke({
       task: 'generation', tenantId: 'tenant', region: 'eu', riskTier: 'high',
       containsRestrictedData: true, maximumCostMinorUnits: 10,

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "tlsRequired": true,
+  "privateOriginOnly": true,
+  "maximumBodyBytes": 1000000,
+  "maximumConcurrentRequestsPerTenant": 50,
+  "rateLimitPerMinutePerPrincipal": 120,
+  "trustedIdentityHeadersFromEdgeOnly": true,
+  "corsAllowedOrigins": [],
+  "csrf": { "sameSite": "Lax", "originRequired": true, "fetchMetadataRequired": true },
+  "cookies": { "prefix": "__Host-", "httpOnly": true, "secure": true },
+  "contentSecurityPolicy": "default-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+}

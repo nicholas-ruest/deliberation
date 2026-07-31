@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { Entitlement } from '../../src/commercial-operations/domain/index.js';
 import { EvaluationRun, DecisionBrief } from '../../src/evaluation/domain/index.js';
 import { ErasureProcessManager, type ErasureParticipant, type StorageSurface } from '../../src/governance/application/index.js';
-import { ConnectorGateway } from '../../src/integrations/application/index.js';
+import { ConnectorGateway, allowTestDependencies } from '../../src/integrations/application/index.js';
 import { ConnectorRegistration } from '../../src/integrations/domain/index.js';
 import { LearningCandidate } from '../../src/learning/domain/index.js';
 import { TamperEvidentAuditLedger } from '../../src/platform/audit/index.js';
@@ -130,7 +130,7 @@ describe('Prompt 18 integrated acceptance journeys', () => {
     registration.value.approve('read', 'schema:1', 'reviewer', clock.now());
     let resolve!: (value: unknown) => void;
     const client = { call: vi.fn(() => new Promise((done) => { resolve = done; })) };
-    const gateway = new ConnectorGateway(registration.value, client);
+    const gateway = new ConnectorGateway(registration.value, client, allowTestDependencies);
     const invocation = {
       tenantId: 'tenant', capability: 'read', schemaHash: 'schema:1', capabilityClass: 'read' as const,
       targetHost: 'safe.example', purpose: 'evidence', input: {},

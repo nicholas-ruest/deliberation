@@ -1,1 +1,2 @@
 export * from './gateway.js';
+export * from './dependency-eligibility.js';

@@ -1,47 +1,47 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: deliberation-api
+  name: deliberation-web
   namespace: deliberation-cell
 spec:
   replicas: 3
   selector:
-    matchLabels: { app: deliberation-api }
+    matchLabels: { app: deliberation-web }
   template:
     metadata:
-      labels: { app: deliberation-api }
+      labels: { app: deliberation-web }
     spec:
-      serviceAccountName: deliberation-api
+      serviceAccountName: deliberation-web
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         seccompProfile: { type: RuntimeDefault }
       containers:
-        - name: api
-          image: deliberation-api@sha256:RELEASE_DIGEST_REQUIRED
-          ports: [{ containerPort: 3000 }]
+        - name: web
+          image: deliberation-web@sha256:RELEASE_DIGEST_REQUIRED
+          ports: [{ containerPort: 3001 }]
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities: { drop: ["ALL"] }
           resources:
-            requests: { cpu: 250m, memory: 256Mi }
-            limits: { cpu: "1", memory: 1Gi }
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 512Mi }
           volumeMounts:
             - { name: workload-identity, mountPath: /var/run/secrets/deliberation, readOnly: true }
-          readinessProbe: { httpGet: { path: /health/ready, port: 3000 } }
-          livenessProbe: { httpGet: { path: /health/live, port: 3000 } }
+          readinessProbe: { httpGet: { path: /health/ready, port: 3001 } }
+          livenessProbe: { httpGet: { path: /health/live, port: 3001 } }
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: topology.kubernetes.io/zone
           whenUnsatisfiable: DoNotSchedule
           labelSelector:
-            matchLabels: { app: deliberation-api }
+            matchLabels: { app: deliberation-web }
       volumes:
         - name: workload-identity
           projected:
             sources:
               - serviceAccountToken:
                   path: token
-                  audience: deliberation-cell-api
+                  audience: deliberation-cell-web
                   expirationSeconds: 600
