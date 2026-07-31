@@ -1,1 +1,1 @@
-// Deliberation aggregate exports.
+export * from './deliberation-case.js';

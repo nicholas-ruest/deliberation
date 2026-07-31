@@ -88,11 +88,11 @@
 
 **Responsibilities:** versioned policy evaluation, decision-domain risk classification, tool approval, consent receipts, retention/erasure orchestration, legal hold, and human-review requirements.
 
-**Aggregates:** `PolicySet`, `ConsentRecord`.
+**Aggregates:** `PolicySet`, `SafetyCase`, `ConsentRecord`.
 
 **Rules:** deny overrides allow; policy version is recorded on every authorization; consent is purpose-specific and revocable; legal hold blocks physical erasure but not access restriction; consequential domains require configured human review.
 
-**Published events:** `PolicySetActivated`, `ConsentGranted`, `ConsentWithdrawn`, `ErasureOrdered`, `LegalHoldApplied`.
+**Published events:** `PolicySetActivated`, `SafetyCaseActivated`, `SafetyCaseSuspended`, `ConsentGranted`, `ConsentWithdrawn`, `ErasureOrdered`, `LegalHoldApplied`.
 
 ## 8. Learning
 
@@ -124,11 +124,11 @@
 
 **Responsibilities:** commercial plans, feature entitlements, quota reservation, usage metering, invoice-provider reconciliation, trials, suspension grace periods, and enterprise contract overrides.
 
-**Aggregates:** `Entitlement`.
+**Aggregates:** `ProductPlan`, `CustomerContract`, `Entitlement`.
 
 **Rules:** a planning run reserves its maximum budget before execution; consumption is idempotent; metering never exposes deliberation content; billing failure cannot erase customer data; governance limits override commercial entitlement.
 
-**Published events:** `EntitlementChanged`, `QuotaReserved`, `UsageConsumed`, `QuotaReleased`, `CommercialAccessSuspended`.
+**Published events:** `ProductPlanPublished`, `CustomerContractActivated`, `EntitlementChanged`, `QuotaReserved`, `UsageConsumed`, `QuotaReleased`, `CommercialAccessSuspended`.
 
 ## Integration matrix
 
@@ -142,6 +142,9 @@
 | Learning | Deliberation/Evaluation | recorded choice, predictions, outcomes | events |
 | Commercial Operations | Planning | reservation/consumption | synchronous reserve, async reconcile |
 | Evidence | Integrations | fetched artifact + provenance envelope | command/result |
+| All contexts | Commercial Operations | feature entitlement + reservation | synchronous check/reserve |
+| Platform lifecycle | Identity/Governance/Commercial Operations | onboarding, suspension and offboarding workflow contracts | durable workflow |
+| Query surfaces | Owning context | versioned projection with declared consistency/watermark | asynchronous projection |
 
 ## Anti-corruption boundaries
 

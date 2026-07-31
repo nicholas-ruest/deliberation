@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deliberation.example/schemas/v1/webhook-delivery.json",
+  "title": "WebhookDeliveryV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["deliveryId", "subscriptionId", "event", "deliveredAt", "signatureVersion"],
+  "properties": {
+    "deliveryId": { "type": "string", "format": "uuid" },
+    "subscriptionId": { "type": "string", "format": "uuid" },
+    "event": { "$ref": "https://deliberation.example/schemas/v1/integration-event.json" },
+    "deliveredAt": { "type": "string", "format": "date-time" },
+    "signatureVersion": { "type": "string" }
+  }
+}

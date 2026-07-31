@@ -1,1 +1,1 @@
-// Identity & Access use-case exports.
+export * from './subject-resolution.js';

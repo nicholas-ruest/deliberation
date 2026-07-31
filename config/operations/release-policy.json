@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "requiredEvidence": {
+    "low": ["source", "schemas", "migrations", "tenant-isolation", "prompt-injection", "poisoned-memory", "citation-correctness", "calibration", "accessibility", "performance", "cost-ceiling", "restore", "security", "sbom", "provenance", "approval", "canary"],
+    "moderate": ["source", "schemas", "migrations", "tenant-isolation", "prompt-injection", "poisoned-memory", "citation-correctness", "calibration", "accessibility", "performance", "cost-ceiling", "restore", "security", "sbom", "provenance", "approval", "canary"],
+    "high": ["source", "schemas", "migrations", "tenant-isolation", "prompt-injection", "poisoned-memory", "citation-correctness", "calibration", "accessibility", "performance", "cost-ceiling", "restore", "security", "sbom", "provenance", "approval", "canary"],
+    "critical": ["source", "schemas", "migrations", "tenant-isolation", "prompt-injection", "poisoned-memory", "citation-correctness", "calibration", "accessibility", "performance", "cost-ceiling", "restore", "security", "sbom", "provenance", "approval", "canary"]
+  },
+  "minimumEvidenceLevel": {
+    "low": "local-pass",
+    "moderate": "environment-qualified",
+    "high": "external-qualified",
+    "critical": "external-qualified"
+  },
+  "requiredApprovals": { "low": 1, "moderate": 2, "high": 3, "critical": 4 },
+  "minimumCanaryObservations": { "low": 10, "moderate": 50, "high": 200, "critical": 1000 },
+  "maximumCanaryFailureRate": { "low": 0.1, "moderate": 0.05, "high": 0.01, "critical": 0.001 }
+}

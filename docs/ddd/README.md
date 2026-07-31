@@ -64,6 +64,22 @@ There is no automatic “winning-memory merge.” Promotion applies only to prov
 
 Detailed aggregate contracts are in [aggregate-catalog.md](./aggregate-catalog.md). Context interaction and event ownership are in [context-map.md](./context-map.md). Quality gates are in [implementation-readiness.md](./implementation-readiness.md).
 
+## Implementation specification set
+
+| Document | Binding implementation concern |
+|---|---|
+| [Context map](./context-map.md) | ownership, dependencies, language, published facts |
+| [Aggregate catalog](./aggregate-catalog.md) | consistency boundaries, state, commands, invariants |
+| [Application contracts](./application-contracts.md) | command/query/event envelopes, idempotency, errors, webhooks |
+| [Workflow specifications](./workflow-specifications.md) | durable sagas, retries, cancellation, compensation, repair |
+| [Authorization and audit](./authorization-and-audit.md) | roles, policy inputs, obligations, approvals, break glass |
+| [Data and projection contracts](./data-and-projection-contracts.md) | storage ownership, classification, migration, search, cache, erasure |
+| [Capability and entitlement model](./capability-and-entitlement-model.md) | plans, contracts, features, quotas, reservations, reconciliation |
+| [Operational model](./operational-model.md) | SLOs, incidents, runbooks, capacity, continuity, release receipts |
+| [Implementation readiness](./implementation-readiness.md) | aggregate and cross-context production gates |
+
+These documents are normative together. A generated type or database schema that contradicts a domain invariant is defective even if it compiles. When a contract is intentionally changed, update its ADR, affected domain specifications, compatibility/migration plan, and executable acceptance evidence in the same change.
+
 ## Required architecture tests
 
 - Domain packages do not import infrastructure packages.
@@ -73,3 +89,6 @@ Detailed aggregate contracts are in [aggregate-catalog.md](./aggregate-catalog.m
 - Every externally consumed event has a compatibility test.
 - Every state transition has an invariant test and an authorization test.
 - Every generated artifact retains model, prompt, evidence, and tool provenance.
+- Every public action has an explicit authorization, entitlement, idempotency, audit, and failure contract.
+- Every durable workflow is restartable at each step and has bounded retry, cancellation, compensation, and repair evidence.
+- Every projection, cache, search index, export, and backup participates in tenant isolation, retention, and erasure.

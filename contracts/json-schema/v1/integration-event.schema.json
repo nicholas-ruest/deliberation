@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deliberation.example/schemas/v1/integration-event.json",
+  "title": "IntegrationEventV1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "eventId", "eventType", "schemaVersion", "tenantId", "aggregateType",
+    "aggregateId", "aggregateVersion", "occurredAt", "recordedAt", "actorId",
+    "correlationId", "purpose", "dataClassification", "payload"
+  ],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "tenantId": { "type": "string", "format": "uuid" },
+    "aggregateType": { "type": "string", "minLength": 1 },
+    "aggregateId": { "type": "string", "format": "uuid" },
+    "aggregateVersion": { "type": "integer", "minimum": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "recordedAt": { "type": "string", "format": "date-time" },
+    "actorId": { "type": "string", "format": "uuid" },
+    "correlationId": { "type": "string", "format": "uuid" },
+    "causationId": { "type": "string", "format": "uuid" },
+    "purpose": { "type": "string", "minLength": 1 },
+    "policyDecisionRef": { "type": "string", "format": "uuid" },
+    "dataClassification": { "enum": ["public", "internal", "confidential", "restricted"] },
+    "payload": { "type": "object" }
+  }
+}

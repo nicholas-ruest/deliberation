@@ -1,1 +1,1 @@
-// Governance use-case exports.
+export * from './erasure-process.js';

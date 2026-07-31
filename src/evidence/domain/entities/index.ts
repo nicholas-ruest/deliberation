@@ -1,1 +1,1 @@
-// Evidence aggregate exports.
+export * from './evidence-record.js';

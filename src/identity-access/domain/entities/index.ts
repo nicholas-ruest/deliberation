@@ -1,1 +1,2 @@
-// Aggregate implementations are defined from docs/ddd/aggregate-catalog.md.
+export * from './principal.js';
+export * from './tenant.js';

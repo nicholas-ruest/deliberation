@@ -1,0 +1,18 @@
+{
+  "readOnlyRootFilesystem": true,
+  "allowPrivilegeEscalation": false,
+  "runAsNonRoot": true,
+  "ambientCredentials": false,
+  "capabilities": { "drop": ["ALL"] },
+  "limits": {
+    "cpu": "1000m",
+    "memory": "1Gi",
+    "wallClockSeconds": 300,
+    "pids": 128
+  },
+  "egress": {
+    "default": "deny",
+    "allowedVia": "connector-gateway"
+  },
+  "credentialDelivery": "short-lived-audience-bound-capability"
+}

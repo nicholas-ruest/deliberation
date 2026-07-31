@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deliberation-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: deliberation-api }
+  template:
+    metadata:
+      labels: { app: deliberation-api }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: api
+          image: deliberation-api@sha256:RELEASE_DIGEST_REQUIRED
+          ports: [{ containerPort: 3000 }]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 250m, memory: 256Mi }
+            limits: { cpu: "1", memory: 1Gi }
+          readinessProbe: { httpGet: { path: /health/ready, port: 3000 } }
+          livenessProbe: { httpGet: { path: /health/live, port: 3000 } }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels: { app: deliberation-api }

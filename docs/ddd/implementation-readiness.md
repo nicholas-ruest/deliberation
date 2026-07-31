@@ -16,6 +16,11 @@ An aggregate is production-ready only when all of the following exist:
 - runbook entries for stuck workflows and repair;
 - migration/backfill and rollback procedures;
 - load tests at forecast peak plus agreed headroom.
+- public command/query/event contracts with typed errors and compatibility fixtures;
+- durable workflow crash/retry/cancel/compensation/repair tests;
+- explicit entitlement, capacity admission, and usage-reconciliation behavior;
+- registered projection/cache/search/export/backup retention and erasure handlers;
+- approved operational owner, SLO, dashboard, alert, runbook, and rollback path.
 
 ## Cross-context acceptance journeys
 
@@ -57,6 +62,9 @@ A promoted candidate breaching calibration, safety, or fairness thresholds autom
 | Accessibility | WCAG 2.2 AA including uncertainty and chart alternatives |
 | Operability | traces/logs/metrics joined by correlation ID; runbooks exercised |
 | Compatibility | API/event schema checks; expand-contract database migrations |
+| Audit | hash-chain verification, key rotation, signed export, forensic reconstruction |
+| Enterprise lifecycle | onboarding, federation, support access, suspension, export and offboarding |
+| Portability | signed versioned export; quarantined dry-run import; supported-version fixtures |
 
 ## Required test pyramid
 
@@ -67,6 +75,8 @@ A promoted candidate breaching calibration, safety, or fairness thresholds autom
 5. Adversarial AI tests and deterministic replay fixtures.
 6. Performance, soak, chaos, backup/restore, and disaster-recovery tests.
 7. Production canaries and synthetic probes that contain no customer content.
+8. Workflow fault injection at every durable boundary and authorization revocation point.
+9. Meter/provider/invoice reconciliation and overload/noisy-neighbor exercises.
 
 ## Prohibited shortcuts
 
@@ -79,3 +89,18 @@ A promoted candidate breaching calibration, safety, or fairness thresholds autom
 - authorization based only on UI visibility;
 - hard deletion without erasure workflow evidence;
 - distributed mesh introduction without a measured requirement and a new ADR.
+- mutable or unversioned prompt, rubric, model route, verifier, policy, safety case, or production configuration;
+- support impersonation, standing customer-content access, or unaudited break glass;
+- post-filter-only tenant security for search/vector retrieval;
+- treating billing-provider state, caches, projections, logs, or exports as canonical domain truth.
+
+## Required implementation artifacts
+
+Before general availability, the release receipt must bind the exact:
+
+- API, event, exchange-package, database, and projection schemas;
+- configuration, prompt, rubric, routing, verifier, policy, safety-case, and model digests;
+- threat model, privacy/data-flow inventory, abuse analysis, and supported-use statement;
+- SLOs, capacity/cost forecast, runbooks, restore/rollback results, and on-call ownership;
+- contract/entitlement catalog, meter definitions, reconciliation results, and support lifecycle;
+- signed build provenance, SBOM, migrations, evaluation results, approvals, and canary limits.

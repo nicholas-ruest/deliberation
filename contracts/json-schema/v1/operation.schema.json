@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deliberation.example/schemas/v1/operation.json",
+  "title": "OperationV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "tenantId", "type", "state", "acceptedAt", "cancellable", "version"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "tenantId": { "type": "string", "format": "uuid" },
+    "type": { "type": "string" },
+    "resourceRef": { "type": "string" },
+    "state": { "enum": ["accepted", "running", "succeeded", "failed", "cancelled", "expired"] },
+    "acceptedAt": { "type": "string", "format": "date-time" },
+    "cancellable": { "type": "boolean" },
+    "version": { "type": "integer", "minimum": 0 }
+  }
+}

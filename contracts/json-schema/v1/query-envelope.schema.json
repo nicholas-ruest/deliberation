@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deliberation.example/schemas/v1/query-envelope.json",
+  "title": "QueryEnvelopeV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["queryId", "queryType", "schemaVersion", "tenantId", "principalId", "subjectSessionEpoch", "correlationId", "purpose", "consistency", "limit"],
+  "properties": {
+    "queryId": { "type": "string", "format": "uuid" },
+    "queryType": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "const": 1 },
+    "tenantId": { "type": "string", "format": "uuid" },
+    "principalId": { "type": "string", "format": "uuid" },
+    "subjectSessionEpoch": { "type": "integer", "minimum": 0 },
+    "correlationId": { "type": "string", "format": "uuid" },
+    "purpose": { "type": "string", "minLength": 1 },
+    "consistency": { "enum": ["strong", "read-your-writes", "bounded-stale", "eventual"] },
+    "cursor": { "type": "string", "maxLength": 4096 },
+    "limit": { "type": "integer", "minimum": 1, "maximum": 200 },
+    "filters": { "type": "object", "additionalProperties": true }
+  }
+}

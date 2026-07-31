@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deliberation.example/schemas/v1/command-envelope.json",
+  "title": "CommandEnvelopeV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "commandId", "commandType", "schemaVersion", "tenantId", "principalId",
+    "subjectSessionEpoch", "idempotencyKey", "correlationId", "purpose",
+    "riskTier", "requestedAt", "deadline", "payload"
+  ],
+  "properties": {
+    "commandId": { "type": "string", "format": "uuid" },
+    "commandType": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "schemaVersion": { "const": 1 },
+    "tenantId": { "type": "string", "format": "uuid" },
+    "principalId": { "type": "string", "format": "uuid" },
+    "subjectSessionEpoch": { "type": "integer", "minimum": 0 },
+    "resourceId": { "type": "string", "format": "uuid" },
+    "expectedVersion": { "type": "integer", "minimum": 0 },
+    "idempotencyKey": { "type": "string", "minLength": 8, "maxLength": 200 },
+    "correlationId": { "type": "string", "format": "uuid" },
+    "causationId": { "type": "string", "format": "uuid" },
+    "purpose": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "riskTier": { "enum": ["low", "moderate", "high", "prohibited"] },
+    "requestedAt": { "type": "string", "format": "date-time" },
+    "deadline": { "type": "string", "format": "date-time" },
+    "payload": {}
+  }
+}

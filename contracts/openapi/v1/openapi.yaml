@@ -1,0 +1,26 @@
+openapi: 3.1.0
+info:
+  title: Deliberation Platform API
+  version: 1.0.0
+paths:
+  /v1/operations/{operationId}:
+    get:
+      operationId: getOperation
+      parameters:
+        - in: path
+          name: operationId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Durable operation
+          content:
+            application/json:
+              schema:
+                $ref: ../../json-schema/v1/operation.schema.json
+        "404":
+          description: Not found in the authorized tenant scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: ../../json-schema/v1/problem-details.schema.json

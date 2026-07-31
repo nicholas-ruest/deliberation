@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "controls": [
+    { "id": "context-schema-ownership", "mode": "automated", "evidence": "scripts/check-architecture.ts" },
+    { "id": "immutable-published-artifacts", "mode": "automated", "evidence": "tests/domain/authority.test.ts" },
+    { "id": "stronger-than-model-verification", "mode": "automated", "evidence": "tests/domain/state-machine-coverage.test.ts" },
+    { "id": "credential-reference-only", "mode": "automated", "evidence": "tests/domain/integrations-commercial.test.ts" },
+    { "id": "bounded-reserved-execution", "mode": "automated", "evidence": "tests/journeys/prompt-18-workflows.test.ts" },
+    { "id": "observed-outcomes-only-learning", "mode": "automated", "evidence": "tests/domain/evidence-learning.test.ts" },
+    { "id": "server-side-authorization", "mode": "automated", "evidence": "tests/domain/authority.test.ts" },
+    { "id": "governed-erasure", "mode": "automated", "evidence": "tests/journeys/prompt-18-workflows.test.ts" },
+    { "id": "mesh-requires-adr", "mode": "review", "evidence": "docs/architecture/dependency-rules.md" },
+    { "id": "immutable-versioned-configuration", "mode": "automated", "evidence": "src/platform/release/release-gate.ts" },
+    { "id": "audited-break-glass", "mode": "review", "evidence": "docs/ddd/authorization-and-audit.md" },
+    { "id": "tenant-prefiltered-retrieval", "mode": "automated", "evidence": "tests/platform/shared-services.test.ts" },
+    { "id": "canonical-domain-truth", "mode": "review", "evidence": "docs/ddd/data-and-projection-contracts.md" }
+  ]
+}

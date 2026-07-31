@@ -1,1 +1,1 @@
-// Internal adapters; never export from the context public API.
+export * from './federation-ports.js';

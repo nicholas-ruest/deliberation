@@ -1,1 +1,1 @@
-// Integrations use-case exports.
+export * from './gateway.js';

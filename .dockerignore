@@ -1,0 +1,14 @@
+.git
+.github
+.claude
+.claude-flow
+.swarm
+.agents
+.codex
+node_modules
+coverage
+artifacts
+benchmarks
+tests
+docs
+.plans

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "objectives": {
+    "command-api": { "availability": 0.999 },
+    "query-api": { "availability": 0.999, "p95Ms": 500, "p99Ms": 1500 },
+    "authorization": { "availability": 0.9999, "p99Ms": 100 },
+    "planning-admission": { "availability": 0.995 },
+    "cancellation": { "stopAdmissionP99Ms": 5000, "convergeP99Ms": 120000 },
+    "brief-publication": { "availability": 0.995, "maximumMs": 300000 },
+    "revocation": { "p99Ms": 60000 },
+    "audit-sealing": { "availability": 0.9999, "maximumMs": 300000 },
+    "usage-reconciliation": { "availabilityWithin24Hours": 0.999, "beforeInvoiceClose": 1.0 }
+  },
+  "zeroTolerance": [
+    "cross-tenant-disclosure",
+    "incorrect-authorization-allow",
+    "silent-provenance-loss",
+    "audit-loss",
+    "unmetered-paid-effect"
+  ]
+}

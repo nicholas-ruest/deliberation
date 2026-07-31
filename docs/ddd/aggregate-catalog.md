@@ -87,6 +87,15 @@ Every aggregate has `id`, `tenantId`, `version`, `createdAt`, `updatedAt`, and u
 **Invariants:** granular purpose and affirmative evidence required where consent is the basis; withdrawal is irreversible for that receipt; new consent creates a new receipt; withdrawal prevents new processing immediately and triggers downstream restriction/erasure according to policy.
 **Commands:** grant, narrow, withdraw, apply legal hold annotation.
 
+## SafetyCase
+
+**Root:** `SafetyCase`
+**Owns:** use-case/risk scope, intended and prohibited uses, hazards, required evidence and verifiers, approved model/tool routes, human-review roles, disclosures, thresholds, monitoring, evidence manifest, owners and review interval.
+**States:** `draft -> validated -> approved -> active`; `suspended`, `expired`, `retired`, and `superseded` prevent new affected publication.
+**Invariants:** scope and risk tier are explicit; prohibited use cannot be activated; every control maps to executable evidence or named human procedure; author cannot be sole approver; evidence binds immutable artifact versions; activation expires; platform mandatory controls cannot be weakened.
+**Commands:** draft, classify scope, add hazard/control, attach evidence, validate fixtures, approve, activate, suspend, supersede, retire.
+**Runtime rule:** a workflow snapshots the active case/version; a material control breach stops new affected publication and may cancel in-flight work at the next consequential boundary.
+
 ## OutcomeRecord
 
 **Root:** `OutcomeRecord`
@@ -116,9 +125,25 @@ Every aggregate has `id`, `tenantId`, `version`, `createdAt`, `updatedAt`, and u
 **Invariants:** reservation plus consumed quantity cannot exceed hard quota unless explicit overage is allowed; reservation/consume/release idempotent; governance denial overrides entitlement; provider webhook cannot directly mutate quota without reconciliation; content never appears in billing dimensions.
 **Commands:** change plan, reserve, consume, release, reconcile, enter/leave grace, suspend commercial access.
 
+## ProductPlan
+
+**Root:** `ProductPlan`
+**Owns:** stable feature codes, included quota dimensions, overage behavior, service/support tier, eligible provider/connector classes, and effective interval.
+**Invariants:** published versions are immutable; feature and meter meanings are versioned; a plan cannot weaken governance/platform minima; removal follows compatibility and contract policy.
+**Commands:** draft, define feature/quota, validate, publish, retire.
+
+## CustomerContract
+
+**Root:** `CustomerContract`
+**Owns:** tenant/billing account, plan version, negotiated overrides, regions, term, service/support commitments, data terms, invoice reference, effective interval.
+**Invariants:** effective versions do not overlap ambiguously; overrides reference supported semantics and approval; termination never implies erasure; contract activation materializes exactly one entitlement version.
+**Commands:** propose, validate, approve, activate, renew, amend, terminate.
+
 ## Aggregate transaction boundaries
 
 - Starting a run uses a saga: validate deliberation -> authorize policy -> reserve quota -> freeze input snapshots -> create scenario tree. Compensation releases quota and abandons partial snapshots.
 - Publishing a brief uses an outbox event; attaching it to a case is eventually consistent and idempotent.
 - Consent withdrawal/erasure uses a process manager spanning evidence, projections, vector indexes, blobs, caches, learning cohorts, and backups.
 - Learning promotion uses a deployment workflow; it never shares a database transaction with evaluation.
+- Enterprise onboarding/offboarding coordinates identity, policy/safety case, contract/entitlement, regional allocation, audit readiness, export, and governed erasure.
+- Projection rebuilds and data exchange imports are workflows with immutable watermarks, validation, idempotent cutover/commit, and rollback.

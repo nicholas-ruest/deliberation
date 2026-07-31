@@ -1,0 +1,50 @@
+{
+  "name": "@deliberation/platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:architecture": "vitest run tests/architecture",
+    "test:contracts": "vitest run tests/contracts",
+    "test:security": "vitest run tests/security",
+    "security:scan": "tsx scripts/security-scan.ts",
+    "licenses:check": "tsx scripts/check-licenses.ts",
+    "deployment:check": "tsx scripts/check-deployment.ts",
+    "shortcuts:check": "tsx scripts/check-prohibited-shortcuts.ts",
+    "sandbox:test": "sh scripts/test-container-sandbox.sh",
+    "benchmark": "vitest bench --run",
+    "evidence:source": "tsx scripts/release-evidence.ts",
+    "contracts:validate": "tsx scripts/validate-contracts.ts",
+    "architecture:check": "tsx scripts/check-architecture.ts",
+    "migrations:check": "tsx scripts/check-migrations.ts",
+    "migrations:apply": "tsx scripts/apply-migrations.ts",
+    "quality": "npm run build && npm run typecheck && npm run architecture:check && npm run contracts:validate && npm run migrations:check && npm run security:scan && npm run licenses:check && npm run deployment:check && npm run shortcuts:check && npm run test:coverage",
+    "dev": "tsx watch src/apps/api.ts",
+    "start:api": "node dist/apps/api.js",
+    "start:worker": "node dist/apps/worker.js"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "1.9.0",
+    "agenticow": "0.2.4",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "pg": "8.16.3",
+    "zod": "4.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "@types/pg": "8.15.6",
+    "@vitest/coverage-v8": "4.1.10",
+    "fast-check": "4.5.3",
+    "tsx": "4.23.1",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  }
+}

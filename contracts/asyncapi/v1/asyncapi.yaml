@@ -1,0 +1,20 @@
+asyncapi: 3.0.0
+info:
+  title: Deliberation Platform Integration Events
+  version: 1.0.0
+channels:
+  domainEvents:
+    address: deliberation.events.v1
+    messages:
+      integrationEvent:
+        $ref: "#/components/messages/IntegrationEvent"
+operations:
+  receiveDomainEvent:
+    action: receive
+    channel:
+      $ref: "#/channels/domainEvents"
+components:
+  messages:
+    IntegrationEvent:
+      payload:
+        $ref: ../../json-schema/v1/integration-event.schema.json

@@ -1,1 +1,1 @@
-// Preferences aggregate exports.
+export * from './preference-profile.js';

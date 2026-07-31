@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deliberation-worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: deliberation-worker }
+  template:
+    metadata:
+      labels: { app: deliberation-worker }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: worker
+          image: deliberation-worker@sha256:RELEASE_DIGEST_REQUIRED
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 500m, memory: 512Mi }
+            limits: { cpu: "1", memory: 1Gi }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels: { app: deliberation-worker }

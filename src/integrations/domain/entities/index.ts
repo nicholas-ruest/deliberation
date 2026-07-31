@@ -1,1 +1,1 @@
-// Integrations aggregate exports.
+export * from './connector-registration.js';

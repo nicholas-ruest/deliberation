@@ -22,3 +22,17 @@ These proposed ADRs form one coherent production architecture. “Proposed” me
 | [ADR-016](./ADR-016-reserve-and-meter-compute-before-execution.md) | Commercial cost control |
 | [ADR-017](./ADR-017-secure-the-software-and-ai-supply-chain.md) | Supply-chain security |
 | [ADR-018](./ADR-018-require-evidence-based-release-quality-gates.md) | Production quality gates |
+| [ADR-019](./ADR-019-use-a-tamper-evident-audit-ledger.md) | Tamper-evident audit and forensic evidence |
+| [ADR-020](./ADR-020-treat-deployment-configuration-and-secrets-as-versioned-products.md) | Deployment, configuration, flags, and secrets |
+| [ADR-021](./ADR-021-build-owned-projections-search-and-caches-from-canonical-events.md) | Owned projections, search, and cache consistency |
+| [ADR-022](./ADR-022-use-cell-based-failure-isolation-and-admission-control.md) | Failure isolation, admission, and overload control |
+| [ADR-023](./ADR-023-require-risk-tiered-human-oversight-and-safety-cases.md) | Risk-tiered oversight and safety cases |
+| [ADR-024](./ADR-024-make-enterprise-lifecycle-and-support-first-class.md) | Enterprise onboarding, administration, support, and exit |
+| [ADR-025](./ADR-025-guarantee-versioned-data-portability-and-interoperability.md) | Versioned data portability and interoperability |
+
+## Decision policy
+
+- Accepted ADRs are mandatory constraints until superseded; implementation convenience is not an exception.
+- Every ADR must name measurable acceptance evidence. [ADR-018](./ADR-018-require-evidence-based-release-quality-gates.md) and the [DDD readiness standard](../ddd/implementation-readiness.md) aggregate those gates.
+- A material change to tenant isolation, epistemic rules, human authority, safety envelope, data residency, audit integrity, or release authority requires a superseding ADR and migration plan.
+- Provider and framework selections may change without a new ADR only when the replacement preserves the recorded decision, contracts, and evidence.

@@ -1,1 +1,2 @@
-// Commercial Operations aggregate exports.
+export * from './entitlement.js';
+export * from './product-plan.js';

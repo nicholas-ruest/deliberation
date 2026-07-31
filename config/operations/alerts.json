@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "alerts": [
+    { "name": "fast-error-budget-burn", "window": "5m", "burnRate": 14.4, "severity": "page" },
+    { "name": "slow-error-budget-burn", "window": "1h", "burnRate": 6, "severity": "ticket" },
+    { "name": "workflow-stuck", "metric": "workflow_state_age_seconds", "severity": "page" },
+    { "name": "queue-age", "metric": "queue_oldest_age_seconds", "severity": "page" },
+    { "name": "audit-sealing-lag", "metric": "audit_sealing_lag_seconds", "severity": "page" },
+    { "name": "reservation-leak", "metric": "reservation_unreconciled_total", "severity": "ticket" },
+    { "name": "provider-quality-regression", "metric": "ai_quality_gate_failures_total", "severity": "page" }
+  ]
+}
