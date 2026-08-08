@@ -180,6 +180,12 @@ Do not expose this mode to an untrusted network.
 
 CI runs the production-quality sequence against PostgreSQL, executes benchmarks and sandbox tests, audits dependencies, generates an SBOM, and uploads source-bound evidence. Pull requests and tagged releases share one reusable gate definition, so a release cannot publish on weaker evidence than a pull request.
 
+Three additional checks cover ground the repository's own scripts do not:
+
+- CodeQL (`.github/workflows/codeql.yml`) runs GitHub's `javascript-typescript` dataflow analysis on every pull request, on pushes to `main`, and weekly. `npm run security:scan` only matches a fixed set of source patterns.
+- The same gate builds each of `Dockerfile.api`, `Dockerfile.web`, and `Dockerfile.worker` and scans the resulting image with Trivy, failing on fixable HIGH or CRITICAL OS-package and library findings. `npm audit` inspects the JavaScript dependency tree only, not what is baked into the image.
+- Dependabot (`.github/dependabot.yml`) opens weekly pull requests for npm dependencies, Dockerfile base images, and GitHub Actions. Nothing auto-merges; each update goes through the same gate as any other change.
+
 ## Security model
 
 Security controls are designed to compose rather than depend on a single perimeter:

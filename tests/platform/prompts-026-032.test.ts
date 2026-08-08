@@ -74,7 +74,7 @@ describe('prompt 028 durable delivery semantics', () => {
 });
 
 describe('prompt 029 trusted identities', () => {
-  it('verifies asymmetric claims, rejects replay, and binds workload cell/audience', () => {
+  it('verifies asymmetric claims, rejects replay, and binds workload cell/audience', async () => {
     const { publicKey, privateKey } = generateKeyPairSync('ed25519');
     const header = Buffer.from(JSON.stringify({ alg: 'EdDSA', kid: 'key-1' })).toString('base64url');
     const now = 1_800_000_000;
@@ -87,8 +87,8 @@ describe('prompt 029 trusted identities', () => {
       issuer: 'https://identity.example', audiences: ['deliberation-api'], keys: new Map([['key-1', publicKey]]),
     }]]), new MemoryReplayStore(), () => now);
     const token = `${header}.${payload}.${signature}`;
-    expect(verifier.verify(token, 'deliberation-api').ok).toBe(true);
-    expect(verifier.verify(token, 'deliberation-api')).toMatchObject({ ok: false, error: { code: 'PERMISSION_DENIED' } });
+    expect((await verifier.verify(token, 'deliberation-api')).ok).toBe(true);
+    expect(await verifier.verify(token, 'deliberation-api')).toMatchObject({ ok: false, error: { code: 'PERMISSION_DENIED' } });
     expect(authorizeWorkload(
       { service: 'worker', cellId: 'eu-1a', audience: 'queue' },
       { service: 'worker', cellId: 'eu-1a', audience: 'queue' },

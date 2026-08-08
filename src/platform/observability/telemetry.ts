@@ -23,6 +23,17 @@ export class Telemetry {
   private readonly meter = metrics.getMeter('@deliberation/platform');
   private readonly operationCounter = this.meter.createCounter('deliberation.operations');
   private readonly latency = this.meter.createHistogram('deliberation.operation.duration_ms');
+  private readonly rejectionCounter = this.meter.createCounter('deliberation.security.rejections');
+
+  /**
+   * Discrete counter-only event for a request that was refused before or without doing business
+   * work (auth failure, replay, rate limit) — no span, since there is no operation duration to
+   * bound. This is what makes an attack attempt visible in metrics even when (ADR-034 item 7) the
+   * detailed reason is deliberately not returned to the client that triggered it.
+   */
+  recordRejection(attributes: Readonly<Record<string, unknown>>): void {
+    this.rejectionCounter.add(1, safeAttributes(attributes));
+  }
 
   async operation<T>(
     name: string,

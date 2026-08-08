@@ -6,8 +6,10 @@ import { DecisionLaboratory, type LaboratoryInput, type LaboratoryResult } from 
 import { bootstrapTelemetry } from '../platform/observability/otel-bootstrap.js';
 import { Telemetry } from '../platform/observability/telemetry.js';
 import { contextRuntimeRole, PostgresAggregateStore, PostgresUnitOfWork, type PersistedAggregate } from '../platform/persistence/index.js';
+import { PostgresFixedWindowRateLimiter, type RateLimiter } from '../platform/security/postgres-rate-limiter.js';
+import { PostgresReplayStore } from '../platform/security/postgres-replay-store.js';
 import { EnvSecretProvider, requireSecrets } from '../platform/security/secret-provider.js';
-import { MemoryReplayStore, TrustedIdentityVerifier, type VerifiedIdentity } from '../platform/security/trusted-identity.js';
+import { TrustedIdentityVerifier, type VerifiedIdentity } from '../platform/security/trusted-identity.js';
 import { loadTrustedIssuers } from '../platform/security/trusted-identity-config.js';
 import type { AggregateRoot } from '../shared/domain/aggregate-root.js';
 import type { DomainEventEnvelope } from '../shared/contracts/envelopes.js';
@@ -16,6 +18,7 @@ import { EventFactory, SystemClock, UuidGenerator, type Result } from '../shared
 const SERVICE_VERSION = process.env['SERVICE_VERSION'] ?? '0.1.0';
 const IDENTITY_AUDIENCE = process.env['IDENTITY_AUDIENCE'] ?? 'deliberation-api';
 const port = Number.parseInt(process.env['PORT'] ?? '3000', 10);
+const RATE_LIMIT_PER_PRINCIPAL_PER_MINUTE = Number.parseInt(process.env['RATE_LIMIT_PER_PRINCIPAL_PER_MINUTE'] ?? '60', 10);
 
 // Fail-closed demo gate: two independent conditions, not one flag pair. `ALLOW_LOCAL_DOMAIN_DEMO`
 // alone is not enough — NODE_ENV must also be an explicit non-production value. An unset NODE_ENV
@@ -37,6 +40,7 @@ interface ProductionIntegrations {
   readonly pool: Pool;
   readonly unitOfWork: PostgresUnitOfWork;
   readonly verifier: TrustedIdentityVerifier;
+  readonly rateLimiter: RateLimiter;
 }
 
 function bootstrapProductionIntegrations(): ProductionIntegrations {
@@ -48,7 +52,15 @@ function bootstrapProductionIntegrations(): ProductionIntegrations {
       'start without a trusted identity issuer to verify requests against.');
   }
   const pool = new Pool({ connectionString: secrets.require('DATABASE_URL'), statement_timeout: 5_000, connectionTimeoutMillis: 5_000 });
-  return { pool, unitOfWork: new PostgresUnitOfWork(pool), verifier: new TrustedIdentityVerifier(issuers, new MemoryReplayStore()) };
+  return {
+    pool,
+    unitOfWork: new PostgresUnitOfWork(pool),
+    // Postgres-backed, not in-memory: replay checks and rate-limit counters must agree across
+    // every replica of this process (api-deployment.yaml runs 3), not just the one that handled
+    // a given request (ADR-034).
+    verifier: new TrustedIdentityVerifier(issuers, new PostgresReplayStore(pool)),
+    rateLimiter: new PostgresFixedWindowRateLimiter(pool, RATE_LIMIT_PER_PRINCIPAL_PER_MINUTE),
+  };
 }
 
 let integrations: ProductionIntegrations | undefined;
@@ -61,29 +73,37 @@ if (!localDomainDemoEnabled) {
   }
 }
 
-const Option = z.object({ id: z.string().min(1), title: z.string().min(1), description: z.string().optional() });
+// Upper bounds sized generously above any realistic legitimate request. The 1MB body cap alone
+// does not stop an attacker from packing that budget into thousands of tiny array entries and
+// driving DecisionLaboratory.run()'s per-item loops far past any real input shape (ADR-034 item 2).
+const BOUNDED_TEXT = z.string().max(4_000);
+const SHORT_TEXT = z.string().min(1).max(500);
+const MAX_OPTIONS = 50;
+const MAX_LIST_ENTRIES = 200;
+
+const Option = z.object({ id: SHORT_TEXT, title: SHORT_TEXT, description: BOUNDED_TEXT.optional() });
 const LaboratoryInputSchema = z.object({
   tenantId: z.string().min(1),
-  title: z.string().min(1),
+  title: SHORT_TEXT,
   contract: z.object({
-    question: z.string().min(1),
-    successDefinition: z.string().min(1),
-    options: z.array(Option).min(2),
+    question: BOUNDED_TEXT.min(1),
+    successDefinition: BOUNDED_TEXT.min(1),
+    options: z.array(Option).min(2).max(MAX_OPTIONS),
     generateOptions: z.boolean(),
-    constraints: z.array(z.string()),
-    stakeholderIds: z.array(z.string()),
+    constraints: z.array(BOUNDED_TEXT).max(MAX_LIST_ENTRIES),
+    stakeholderIds: z.array(SHORT_TEXT).max(MAX_LIST_ENTRIES),
     decisionAuthorityId: z.string().min(1),
     riskClassificationReference: z.string().min(1),
     deadline: z.coerce.date(),
   }),
   stakeholderId: z.string().min(1),
   criteria: z.array(z.object({
-    key: z.string().min(1), label: z.string().min(1), unit: z.string().min(1),
+    key: SHORT_TEXT, label: SHORT_TEXT, unit: SHORT_TEXT,
     weight: z.number().finite().nonnegative(), state: z.enum(['suggested', 'confirmed', 'retired']),
-    inferenceProvenance: z.string().optional(),
-  })).min(1),
-  vetoes: z.array(z.object({ key: z.string(), predicate: z.string(), rationale: z.string() })),
-  evidenceSnapshotHashes: z.array(z.string()),
+    inferenceProvenance: BOUNDED_TEXT.optional(),
+  })).min(1).max(MAX_LIST_ENTRIES),
+  vetoes: z.array(z.object({ key: SHORT_TEXT, predicate: BOUNDED_TEXT, rationale: BOUNDED_TEXT })).max(MAX_LIST_ENTRIES),
+  evidenceSnapshotHashes: z.array(z.string().max(200)).max(MAX_LIST_ENTRIES),
   policyVersion: z.string().min(1),
   safetyCaseVersion: z.string().min(1),
   routingPolicyVersion: z.string().min(1),
@@ -95,21 +115,21 @@ const LaboratoryInputSchema = z.object({
     concurrency: z.number().int().positive(),
   }),
   findings: z.array(z.object({
-    id: z.string(), optionId: z.string(), claimId: z.string(),
+    id: SHORT_TEXT, optionId: SHORT_TEXT, claimId: SHORT_TEXT,
     kind: z.enum(['deterministic', 'policy', 'simulation', 'human', 'model-judgment']),
     status: z.enum(['pass', 'fail', 'uncertain']),
-    evidenceReferences: z.array(z.string()).min(1),
+    evidenceReferences: z.array(z.string().max(200)).min(1).max(MAX_LIST_ENTRIES),
     verifierVersion: z.string().min(1),
-    rationale: z.string().min(1),
+    rationale: BOUNDED_TEXT.min(1),
     hardConstraint: z.boolean().optional(),
-  })),
+  })).max(MAX_LIST_ENTRIES),
   scores: z.array(z.object({
-    optionId: z.string(), criterionKey: z.string(), value: z.number().finite(),
-    unit: z.string().min(1), normalizedUtility: z.number().min(0).max(1),
+    optionId: SHORT_TEXT, criterionKey: SHORT_TEXT, value: z.number().finite(),
+    unit: SHORT_TEXT, normalizedUtility: z.number().min(0).max(1),
     weight: z.number().finite().nonnegative(), rubricVersion: z.string().min(1),
-  })),
-  assumptions: z.array(z.string()),
-  limitations: z.array(z.string()),
+  })).max(MAX_LIST_ENTRIES),
+  assumptions: z.array(BOUNDED_TEXT).max(MAX_LIST_ENTRIES),
+  limitations: z.array(BOUNDED_TEXT).max(MAX_LIST_ENTRIES),
 });
 
 // Aggregates coming out of DecisionLaboratory.run() are always fresh, first-time writes (the
@@ -222,23 +242,33 @@ async function handleVerifiedRun(
   request: IncomingMessage,
   response: ServerResponse,
   correlationId: string,
-  { unitOfWork, verifier }: ProductionIntegrations,
+  { unitOfWork, verifier, rateLimiter }: ProductionIntegrations,
 ): Promise<void> {
   const token = extractBearerToken(request);
   if (token === undefined) {
-    problem(response, 401, 'UNAUTHENTICATED', correlationId);
+    reject(response, 401, 'UNAUTHENTICATED', correlationId, 'unauthenticated');
     return;
   }
-  const identity = verifier.verify(token, IDENTITY_AUDIENCE);
+  const identity = await verifier.verify(token, IDENTITY_AUDIENCE);
   if (!identity.ok) {
-    problem(response, 403, identity.error.code, correlationId, identity.error.message);
+    // The specific reason ("Invalid token signature", "Replayed identity token", ...) is
+    // deliberately not sent to the client — it would hand an attacker a free oracle for
+    // iterating on a forged token (ADR-034 item 7). It is still recorded via telemetry (item 4)
+    // and this server-side log line, keyed by the same correlation ID returned to the client.
+    reject(response, 403, identity.error.code, correlationId, reasonCodeOf(identity.error), identity.error.message);
+    return;
+  }
+  const decision = await rateLimiter.consume(`${identity.value.tenantId}:${identity.value.principalId}`);
+  if (!decision.allowed) {
+    response.setHeader('retry-after', '60');
+    reject(response, 429, 'RATE_LIMITED', correlationId, 'rate_limited');
     return;
   }
   await telemetry.operation('laboratory.run', { operation: 'laboratory_run', workflow_type: 'decision-laboratory' }, async () => {
     try {
       const candidate = LaboratoryInputSchema.parse(await readJsonBody(request, 1_000_000));
       if (candidate.tenantId !== identity.value.tenantId) {
-        problem(response, 403, 'PERMISSION_DENIED', correlationId);
+        reject(response, 403, 'PERMISSION_DENIED', correlationId, 'tenant_mismatch');
         return;
       }
       const result = laboratory.run(candidate as LaboratoryInput);
@@ -248,6 +278,19 @@ async function handleVerifiedRun(
       problem(response, 400, cause instanceof z.ZodError ? 'INVALID_ARGUMENT' : 'INTERNAL', correlationId);
     }
   });
+}
+
+function reasonCodeOf(error: { readonly details?: Readonly<Record<string, unknown>> }): string {
+  const code = error.details?.['reasonCode'];
+  return typeof code === 'string' ? code : 'unknown';
+}
+
+/** A rejection that never reaches business logic: records telemetry + a server-side log line
+ * keyed by correlationId, then responds with only the stable code — no detailed reason. */
+function reject(response: ServerResponse, status: number, code: string, correlationId: string, reasonCode: string, logDetail?: string): void {
+  telemetry.recordRejection({ operation: 'laboratory_run', reason_code: reasonCode });
+  console.warn(JSON.stringify({ level: 'warn', msg: 'request.rejected', correlationId, reasonCode, ...(logDetail === undefined ? {} : { detail: logDetail }) }));
+  problem(response, status, code, correlationId);
 }
 
 function writeLaboratoryResult(response: ServerResponse, correlationId: string, result: Result<LaboratoryResult>): void {

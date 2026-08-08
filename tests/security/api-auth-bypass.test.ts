@@ -68,14 +68,14 @@ suite('API identity boundary is fail-closed', () => {
     expect(result.status).toBe(401);
   });
 
-  it('rejects a malformed bearer token', async () => {
+  it('rejects a malformed bearer token without leaking the reason to the client (ADR-034 item 7)', async () => {
     const tenantId = randomUUID();
     const result = await postRun(api.baseUrl, {
       authorization: 'Bearer not-a-token',
     }, laboratoryRequestBody(tenantId));
     expect(result.status).toBe(403);
     expect(result.body['code']).toBe('PERMISSION_DENIED');
-    expect(result.body['detail']).toBe('Malformed identity token');
+    expect(result.body['detail']).toBeUndefined();
   });
 
   it('rejects a structurally valid token whose payload is garbage', async () => {
@@ -99,7 +99,7 @@ suite('API identity boundary is fail-closed', () => {
     const token = mintToken(trusted.privateKeyPem, identityClaims(tenantId, { iat: expiredAt - 300, exp: expiredAt }));
     const result = await postRun(api.baseUrl, { authorization: `Bearer ${token}` }, laboratoryRequestBody(tenantId));
     expect(result.status).toBe(403);
-    expect(result.body['detail']).toBe('Invalid identity claims');
+    expect(result.body['detail']).toBeUndefined();
   });
 
   it('rejects a token signed by an untrusted key', async () => {
@@ -107,7 +107,7 @@ suite('API identity boundary is fail-closed', () => {
     const token = mintToken(untrusted.privateKeyPem, identityClaims(tenantId));
     const result = await postRun(api.baseUrl, { authorization: `Bearer ${token}` }, laboratoryRequestBody(tenantId));
     expect(result.status).toBe(403);
-    expect(result.body['detail']).toBe('Invalid token signature');
+    expect(result.body['detail']).toBeUndefined();
   });
 
   it('rejects a token from an issuer that is not configured as trusted', async () => {
@@ -115,7 +115,7 @@ suite('API identity boundary is fail-closed', () => {
     const token = mintToken(untrusted.privateKeyPem, identityClaims(tenantId, { iss: 'https://attacker.invalid' }));
     const result = await postRun(api.baseUrl, { authorization: `Bearer ${token}` }, laboratoryRequestBody(tenantId));
     expect(result.status).toBe(403);
-    expect(result.body['detail']).toBe('Untrusted issuer or audience');
+    expect(result.body['detail']).toBeUndefined();
   });
 
   it('rejects a token referencing an unknown key id from a trusted issuer', async () => {
@@ -123,7 +123,7 @@ suite('API identity boundary is fail-closed', () => {
     const token = mintToken(trusted.privateKeyPem, identityClaims(tenantId), 'rotated-away-key');
     const result = await postRun(api.baseUrl, { authorization: `Bearer ${token}` }, laboratoryRequestBody(tenantId));
     expect(result.status).toBe(403);
-    expect(result.body['detail']).toBe('Untrusted issuer or audience');
+    expect(result.body['detail']).toBeUndefined();
   });
 
   it('rejects a token whose tenant claim differs from the requested tenant', async () => {
@@ -145,8 +145,34 @@ suite('API identity boundary is fail-closed', () => {
 
     const replayed = await postRun(api.baseUrl, headers, laboratoryRequestBody(tenantId));
     expect(replayed.status).toBe(403);
-    expect(replayed.body['detail']).toBe('Replayed identity token');
+    expect(replayed.body['detail']).toBeUndefined();
   });
+
+  it('replay protection holds against a token first seen by a different process (multi-replica correctness, ADR-034 item 1)', async () => {
+    // Simulates api-deployment.yaml's 3 replicas: two independently spawned api.ts processes
+    // sharing the same Postgres, each with their own in-process TrustedIdentityVerifier state.
+    // A MemoryReplayStore would not catch this; the PostgresReplayStore each process is wired to
+    // in non-demo mode must.
+    const secondReplica = await startApi({
+      NODE_ENV: 'production',
+      DATABASE_URL: process.env['TEST_DATABASE_URL'] ?? '',
+      IDENTITY_AUDIENCE: AUDIENCE,
+      IDENTITY_TRUSTED_ISSUERS: trustedIssuersConfig(trusted.publicKeyPem),
+    });
+    try {
+      const tenantId = randomUUID();
+      const token = mintToken(trusted.privateKeyPem, identityClaims(tenantId));
+      const headers = { authorization: `Bearer ${token}` };
+
+      const first = await postRun(api.baseUrl, headers, laboratoryRequestBody(tenantId));
+      expect(first.status).toBe(201);
+
+      const replayedAgainstOtherReplica = await postRun(secondReplica.baseUrl, headers, laboratoryRequestBody(tenantId));
+      expect(replayedAgainstOtherReplica.status).toBe(403);
+    } finally {
+      await secondReplica.stop();
+    }
+  }, 30_000);
 
   it('accepts a correctly signed, single-use token from the trusted issuer', async () => {
     const tenantId = randomUUID();

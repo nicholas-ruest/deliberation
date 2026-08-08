@@ -60,6 +60,13 @@ suite('API rejects hostile payloads at the validation boundary', () => {
       ...laboratoryRequestBody(tenantId),
       criteria: [{ key: 'value', label: 'Value', unit: 'points', weight: 1, state: 'A'.repeat(200_000) }],
     })],
+    ['an array past the upper bound, packed with small entries to burn CPU cheaply (ADR-034 item 2)', (tenantId) => ({
+      ...laboratoryRequestBody(tenantId),
+      findings: Array.from({ length: 201 }, (_, index) => ({
+        id: `f${index}`, optionId: 'a', claimId: `c${index}`, kind: 'policy', status: 'pass',
+        evidenceReferences: ['e'], verifierVersion: '1', rationale: 'r',
+      })),
+    })],
   ];
 
   for (const [description, build] of rejectedPayloads) {

@@ -47,3 +47,38 @@ jobs:
         with:
           name: source-bound-release-receipt
           path: artifacts/evidence/source-receipt.json
+
+  image-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [api, web, worker]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+
+      # The runtime stages copy dist/, so the image cannot build without it.
+      - run: npm run build
+
+      - name: Build component image
+        env:
+          COMPONENT: ${{ matrix.component }}
+        run: |
+          set -euo pipefail
+          docker build --file "Dockerfile.${COMPONENT}" --tag "deliberation-${COMPONENT}:scan" .
+
+      - name: Scan component image for OS and library vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: deliberation-${{ matrix.component }}:scan
+          scanners: vuln
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'

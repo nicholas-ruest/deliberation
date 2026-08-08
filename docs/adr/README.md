@@ -37,6 +37,7 @@ These proposed ADRs form one coherent production architecture. “Proposed” me
 | [ADR-031](./ADR-031-qualify-and-contain-external-production-dependencies.md) | External dependency qualification |
 | [ADR-032](./ADR-032-deliver-an-accessible-human-authority-web-application.md) | Accessible human-authority web application |
 | [ADR-033](./ADR-033-wire-built-capabilities-into-the-runtime-path-with-fail-closed-defaults.md) | Fail-closed runtime wiring for self-hosted operation |
+| [ADR-034](./ADR-034-close-multi-replica-and-attack-surface-gaps-in-the-wired-runtime.md) | Multi-replica replay/rate-limit correctness and attack-surface hardening |
 
 ## Decision policy
 
