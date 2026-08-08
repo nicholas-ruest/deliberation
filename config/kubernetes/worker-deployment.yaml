@@ -19,6 +19,7 @@ spec:
       containers:
         - name: worker
           image: deliberation-worker@sha256:RELEASE_DIGEST_REQUIRED
+          ports: [{ containerPort: 3001 }]
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -28,6 +29,8 @@ spec:
             limits: { cpu: "1", memory: 1Gi }
           volumeMounts:
             - { name: workload-identity, mountPath: /var/run/secrets/deliberation, readOnly: true }
+          readinessProbe: { httpGet: { path: /health/ready, port: 3001 } }
+          livenessProbe: { httpGet: { path: /health/live, port: 3001 } }
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: topology.kubernetes.io/zone

@@ -25,7 +25,8 @@
     "architecture:check": "tsx scripts/check-architecture.ts",
     "migrations:check": "tsx scripts/check-migrations.ts",
     "migrations:apply": "tsx scripts/apply-migrations.ts",
-    "quality": "npm run build && npm run typecheck && npm run architecture:check && npm run contracts:validate && npm run migrations:check && npm run security:scan && npm run licenses:check && npm run deployment:check && npm run shortcuts:check && npm run test:coverage",
+    "version:check": "tsx scripts/check-version.ts",
+    "quality": "npm run build && npm run typecheck && npm run architecture:check && npm run contracts:validate && npm run migrations:check && npm run security:scan && npm run licenses:check && npm run deployment:check && npm run shortcuts:check && npm run version:check && npm run test:coverage",
     "dev": "tsx watch src/apps/api.ts",
     "start:api": "node dist/apps/api.js",
     "start:worker": "node dist/apps/worker.js"
@@ -33,6 +34,13 @@
   },
   "dependencies": {
     "@opentelemetry/api": "1.9.0",
+    "@opentelemetry/context-async-hooks": "2.10.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "0.221.0",
+    "@opentelemetry/exporter-trace-otlp-http": "0.221.0",
+    "@opentelemetry/resources": "2.10.0",
+    "@opentelemetry/sdk-metrics": "2.10.0",
+    "@opentelemetry/sdk-trace-node": "2.10.0",
+    "@opentelemetry/semantic-conventions": "1.43.0",
     "agenticow": "0.2.4",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",

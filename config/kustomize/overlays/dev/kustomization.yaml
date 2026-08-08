@@ -1,0 +1,80 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Example only. Single-zone, single-replica sizing for a throwaway cluster.
+# Image digests are deliberately left as RELEASE_DIGEST_REQUIRED: pin them to a
+# signed release digest at deploy time.
+namespace: deliberation-cell-dev
+
+resources:
+  - ../../base
+
+replicas:
+  - { name: deliberation-api, count: 1 }
+  - { name: deliberation-worker, count: 1 }
+  - { name: deliberation-web, count: 1 }
+
+patches:
+  # Identify the cell this namespace and its private-dependency egress belong to.
+  - target: { kind: Namespace }
+    patch: |-
+      - op: replace
+        path: /metadata/labels/deliberation.io~1cell-id
+        value: dev-cell-1
+  - target: { kind: NetworkPolicy, name: allow-private-cell-dependencies }
+    patch: |-
+      - op: replace
+        path: /spec/egress/0/to/0/namespaceSelector/matchLabels/deliberation.io~1cell-private-dependencies
+        value: dev-cell-1
+
+  # One replica cannot satisfy the base spread and disruption constraints.
+  - target: { kind: Deployment }
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/topologySpreadConstraints/0/whenUnsatisfiable
+        value: ScheduleAnyway
+  - target: { kind: PodDisruptionBudget, name: deliberation-api }
+    patch: |-
+      - op: replace
+        path: /spec/minAvailable
+        value: 1
+  - target: { kind: HorizontalPodAutoscaler, name: deliberation-api }
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 3
+
+  - target: { kind: Deployment, name: deliberation-api }
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests: { cpu: 100m, memory: 128Mi }
+          limits: { cpu: 500m, memory: 512Mi }
+  - target: { kind: Deployment, name: deliberation-worker }
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests: { cpu: 100m, memory: 256Mi }
+          limits: { cpu: 500m, memory: 512Mi }
+  - target: { kind: Deployment, name: deliberation-web }
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests: { cpu: 50m, memory: 64Mi }
+          limits: { cpu: 250m, memory: 256Mi }
+
+  - target: { kind: ResourceQuota, name: cell-quota }
+    patch: |-
+      - op: replace
+        path: /spec/hard
+        value:
+          requests.cpu: "2"
+          requests.memory: 4Gi
+          limits.cpu: "4"
+          limits.memory: 8Gi

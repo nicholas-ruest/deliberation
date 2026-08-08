@@ -176,8 +176,9 @@ Do not expose this mode to an untrusted network.
 | `npm run sandbox:test` | Exercise worker container restrictions |
 | `npm run benchmark` | Run reproducible local performance benchmarks |
 | `npm run evidence:source` | Bind the exact source tree into an evidence receipt |
+| `npm run version:check` | Validate the semantic version and, at release time, its agreement with the tag |
 
-CI runs the production-quality sequence against PostgreSQL, executes benchmarks and sandbox tests, audits dependencies, generates an SBOM, and uploads source-bound evidence.
+CI runs the production-quality sequence against PostgreSQL, executes benchmarks and sandbox tests, audits dependencies, generates an SBOM, and uploads source-bound evidence. Pull requests and tagged releases share one reusable gate definition, so a release cannot publish on weaker evidence than a pull request.
 
 ## Security model
 
@@ -216,6 +217,22 @@ Repository deployment assets include:
 
 Infrastructure definitions are release inputs, not permission to deploy. Production promotion requires independent authorization and environment-qualified evidence.
 
+### Kustomize base and example overlays
+
+`config/kustomize/base` references the manifests in `config/kubernetes` without duplicating them. Named example overlays render one environment each:
+
+```bash
+kubectl kustomize config/kustomize/overlays/dev
+kubectl kustomize config/kustomize/overlays/staging
+kubectl kustomize config/kustomize/overlays/prod
+```
+
+An overlay changes only what legitimately differs per environment: namespace, cell identifier, replica counts, autoscaling and disruption bounds, container resources, and namespace quota. These are documented starting points, not operated environments.
+
+Cluster provisioning, regional cell placement, workload identity bindings (`CELL_*_IDENTITY_REQUIRED`), and release image digests (`RELEASE_DIGEST_REQUIRED`) stay adopter-owned and are intentionally left unresolved. `npm run deployment:check` rejects a mutable tag or an example overlay that fabricates a digest, and accepts a resolved digest only through `RELEASE_API_IMAGE_DIGEST`, `RELEASE_WEB_IMAGE_DIGEST`, and `RELEASE_WORKER_IMAGE_DIGEST` at release time.
+
+See the [cell deployment runbook](./docs/runbooks/deploy-a-cell.md) for the steps an adopter owns.
+
 ## Production readiness
 
 Passing local CI is necessary but not sufficient for a production claim. The following evidence must be captured in the intended environment:
@@ -229,12 +246,35 @@ Passing local CI is necessary but not sufficient for a production claim. The fol
 - Multi-controller release authorization, canary, signed rollback, rollback-health, and protection-drift tests
 - Browser security, automated WCAG 2.2 AA, keyboard, screen-reader, zoom, contrast, reduced-motion, and comprehension reviews
 
-The detailed evidence boundary for ADR-026 through ADR-032 is documented in [prompts-026-032.md](./docs/implementation/prompts-026-032.md).
+The detailed evidence boundary for ADR-026 through ADR-032 is documented in [prompts-026-032.md](./docs/implementation/prompts-026-032.md). ADR-033's runtime-wiring evidence and remaining external gates are documented in [prompt-033.md](./docs/implementation/prompt-033.md).
+
+## Releases and versioning
+
+This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and records every notable change in [CHANGELOG.md](./CHANGELOG.md) using the Keep a Changelog format. Commits follow Conventional Commits, so a changelog entry is written from the commits it summarizes rather than generated as prose.
+
+Pushing a `vMAJOR.MINOR.PATCH` tag starts `.github/workflows/release.yml`, which:
+
+1. Runs the same reusable quality gate a pull request runs, and stops if it fails.
+2. Rejects the release unless `package.json`'s version is valid semantic versioning and matches both the pushed tag and a released section in the changelog.
+3. Builds the API, web, and worker images and pushes them to `ghcr.io` under this repository.
+4. Generates a CycloneDX SBOM of runtime dependencies and signs each image by digest with cosign, keyless via GitHub OIDC, attaching the SBOM as an attestation.
+
+Adopters can then verify an image before deploying it, for example:
+
+```bash
+cosign verify \
+  --certificate-identity-regexp '^https://github\.com/nicholas-ruest/deliberation/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ghcr.io/nicholas-ruest/deliberation/deliberation-api@sha256:<digest>
+```
+
+The resulting digests are what `RELEASE_API_IMAGE_DIGEST`, `RELEASE_WEB_IMAGE_DIGEST`, and `RELEASE_WORKER_IMAGE_DIGEST` expect. No tag has been cut and no image has been published yet; the pipeline is defined but has not been run.
 
 ## Documentation
 
 | Resource | Description |
 |---|---|
+| [Changelog](./CHANGELOG.md) | Released and unreleased changes, by version |
 | [Architecture decisions](./docs/adr/README.md) | Governing technical and product decisions |
 | [Domain design](./docs/ddd/README.md) | Strategic model and shared invariants |
 | [Context map](./docs/ddd/context-map.md) | Ownership and integration relationships |
@@ -245,6 +285,7 @@ The detailed evidence boundary for ADR-026 through ADR-032 is documented in [pro
 | [Implementation readiness](./docs/ddd/implementation-readiness.md) | Test pyramid and production acceptance journeys |
 | [Prompts 01–18 evidence](./docs/implementation/prompts-01-18.md) | Core platform implementation increments |
 | [Prompts 026–032 evidence](./docs/implementation/prompts-026-032.md) | Regional production and web foundations |
+| [Prompt 033 evidence](./docs/implementation/prompt-033.md) | Runtime wiring: persistence, identity, telemetry, worker |
 | [Runbooks](./docs/runbooks/stuck-workflow.md) | Operational diagnosis and repair procedures |
 
 ## Contributing

@@ -7,45 +7,4 @@ permissions:
   contents: read
 jobs:
   quality:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    services:
-      postgres:
-        image: postgres:17.6-alpine3.22@sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94
-        env:
-          POSTGRES_PASSWORD: component-test-only
-          POSTGRES_DB: deliberation
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d deliberation"
-          --health-interval 2s
-          --health-timeout 5s
-          --health-retries 20
-    env:
-      TEST_DATABASE_URL: postgresql://postgres:component-test-only@127.0.0.1:5432/deliberation
-      DATABASE_URL: postgresql://postgres:component-test-only@127.0.0.1:5432/deliberation
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npm run migrations:apply
-      - run: npm run quality
-      - run: npm run benchmark
-      - run: npm run sandbox:test
-      - run: npm audit --audit-level=low
-      - run: npm sbom --sbom-format cyclonedx > sbom.cdx.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: release-evidence
-          path: |
-            sbom.cdx.json
-            coverage
-      - run: npm run evidence:source
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: source-bound-release-receipt
-          path: artifacts/evidence/source-receipt.json
+    uses: ./.github/workflows/quality.yml

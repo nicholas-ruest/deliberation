@@ -1,0 +1,68 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Example only. This is an illustrative shape for one regional cell, not a
+# qualified production topology: capacity, zone count, and cell placement are
+# the adopter's to determine (ADR-026). Image digests are deliberately left as
+# RELEASE_DIGEST_REQUIRED: pin them to a signed release digest at deploy time.
+namespace: deliberation-cell-prod
+
+resources:
+  - ../../base
+
+replicas:
+  - { name: deliberation-api, count: 6 }
+  - { name: deliberation-worker, count: 6 }
+  - { name: deliberation-web, count: 3 }
+
+patches:
+  # Identify the cell this namespace and its private-dependency egress belong to.
+  - target: { kind: Namespace }
+    patch: |-
+      - op: replace
+        path: /metadata/labels/deliberation.io~1cell-id
+        value: prod-cell-1
+  - target: { kind: NetworkPolicy, name: allow-private-cell-dependencies }
+    patch: |-
+      - op: replace
+        path: /spec/egress/0/to/0/namespaceSelector/matchLabels/deliberation.io~1cell-private-dependencies
+        value: prod-cell-1
+
+  - target: { kind: PodDisruptionBudget, name: deliberation-api }
+    patch: |-
+      - op: replace
+        path: /spec/minAvailable
+        value: 4
+  - target: { kind: HorizontalPodAutoscaler, name: deliberation-api }
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 6
+      - op: replace
+        path: /spec/maxReplicas
+        value: 40
+
+  - target: { kind: Deployment, name: deliberation-api }
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests: { cpu: "1", memory: 1Gi }
+          limits: { cpu: "2", memory: 2Gi }
+  - target: { kind: Deployment, name: deliberation-worker }
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests: { cpu: "1", memory: 1Gi }
+          limits: { cpu: "2", memory: 2Gi }
+
+  - target: { kind: ResourceQuota, name: cell-quota }
+    patch: |-
+      - op: replace
+        path: /spec/hard
+        value:
+          requests.cpu: "32"
+          requests.memory: 64Gi
+          limits.cpu: "64"
+          limits.memory: 128Gi

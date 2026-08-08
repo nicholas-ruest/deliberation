@@ -64,4 +64,32 @@ const serviceAccounts = [...cellFoundation.matchAll(/^kind: ServiceAccount$[\s\S
 for (const workload of ['deliberation-api', 'deliberation-worker', 'deliberation-web']) {
   if (!serviceAccounts.includes(workload)) throw new Error(`Cell foundation lacks dedicated ${workload} service account`);
 }
+const cellIdPlaceholders = [...cellFoundation.matchAll(/CELL_ID_REQUIRED/g)].length;
+const canonicalManifests = ['cell-foundation.yaml', 'api-deployment.yaml', 'worker-deployment.yaml', 'web-deployment.yaml'];
+const kustomizeBase = await readFile('config/kustomize/base/kustomization.yaml', 'utf8');
+if (!kustomizeBase.includes('../../kubernetes')) {
+  throw new Error('Kustomize base must reference the canonical config/kubernetes manifests rather than copy them');
+}
+const canonicalKustomization = await readFile('config/kubernetes/kustomization.yaml', 'utf8');
+for (const manifest of canonicalManifests) {
+  if (!canonicalKustomization.includes(manifest)) throw new Error(`Kustomize base omits ${manifest}`);
+}
+
+for (const environment of ['dev', 'staging', 'prod']) {
+  const overlay = await readFile(`config/kustomize/overlays/${environment}/kustomization.yaml`, 'utf8');
+  if (!overlay.includes('../../base')) {
+    throw new Error(`${environment} overlay must build on config/kustomize/base`);
+  }
+  const resolvedCellIds = [...overlay.matchAll(new RegExp(`^\\s*value: ${environment}-cell-\\d+$`, 'gm'))].length;
+  if (resolvedCellIds !== cellIdPlaceholders) {
+    throw new Error(`${environment} overlay must resolve all ${cellIdPlaceholders} cell id placeholders to a named ${environment} cell`);
+  }
+  if (/^\s*value:\s*\S*_REQUIRED\s*$/m.test(overlay)) {
+    throw new Error(`${environment} overlay must not set a value to an unresolved deploy-time placeholder`);
+  }
+  if (overlay.includes('sha256:')) {
+    throw new Error(`${environment} overlay must not pin an image digest; digests are bound at deploy time from a signed release`);
+  }
+}
+
 console.log('Deployment policy checks passed.');
