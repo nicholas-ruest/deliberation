@@ -36,14 +36,14 @@ jobs:
       - run: npm run sandbox:test
       - run: npm audit --audit-level=low
       - run: npm sbom --sbom-format cyclonedx > sbom.cdx.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: release-evidence
           path: |
             sbom.cdx.json
             coverage
       - run: npm run evidence:source
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: source-bound-release-receipt
           path: artifacts/evidence/source-receipt.json
