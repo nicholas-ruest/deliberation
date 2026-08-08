@@ -18,9 +18,9 @@ Deliberation Platform is a human-authority decision laboratory for organizations
 
 The platform models generated scenarios as hypotheses, keeps facts and inferences visibly distinct, preserves stakeholder disagreement, and supports explicit abstention when evidence or confidence is insufficient. Every consequential decision remains an authenticated human action.
 
-This repository contains a TypeScript domain-aligned modular monolith with independently runnable API, worker, and web processes. It includes contract-first APIs and events, tenant-aware persistence foundations, durable workflow contracts, policy-enforced integrations, release evidence, and production-oriented Kubernetes controls.
+This repository contains a TypeScript domain-aligned modular monolith with independently runnable API, worker, and web processes: contract-first APIs and events, tenant-aware persistence, durable workflow contracts, policy-enforced integrations, release evidence, and production-oriented Kubernetes controls.
 
-> **Project status:** pre-1.0. Local quality gates and deterministic acceptance suites are implemented. Managed-cloud, external-provider, disaster-recovery, identity-federation, and assisted-accessibility exercises remain environment-qualified release gates. See [Production readiness](#production-readiness).
+> **Project status:** pre-1.0. Local quality gates and deterministic acceptance suites are implemented, and runtime wiring is fail-closed by default ([ADR-033](./docs/adr/ADR-033-wire-built-capabilities-into-the-runtime-path-with-fail-closed-defaults.md), [ADR-034](./docs/adr/ADR-034-close-multi-replica-and-attack-surface-gaps-in-the-wired-runtime.md)). Managed-cloud, external-provider, disaster-recovery, identity-federation, and assisted-accessibility exercises remain environment-qualified release gates — see the "Production readiness" section below.
 
 ## Why Deliberation Platform
 
@@ -36,22 +36,42 @@ Enterprise decision systems often collapse uncertainty into a score, hide dissen
 | Reproducible operations | Model routes, prompts, tools, evidence, artifacts, approvals, and releases are versioned and digest bound. |
 | Fail-closed dependencies | Unknown, expired, drifted, or quarantined providers cannot execute production work. |
 
-## Platform capabilities
+## Getting started
 
-- Decision contracts with explicit scope, success criteria, authority, deadlines, risk, and constraints
-- Stakeholder-specific preferences, vetoes, immutable snapshots, and conflict analysis
-- Provenance-bearing evidence with epistemic classification and governed retention
-- Budgeted scenario planning with isolated branch memory and cancellation controls
-- Multi-objective evaluation, Pareto analysis, verification precedence, and typed abstention
-- Decision briefs with citations, assumptions, limitations, dissent, and sensitivity
-- Consent, purpose, policy, human-review, and step-up authorization obligations
-- Contract-first model and connector gateways with schema validation and quarantine fencing
-- Observed-outcome learning with independent promotion, canaries, and rollback
-- Tamper-evident audit, cryptographic erasure workflows, telemetry, SLOs, and release gates
-- Regional cell placement, Kubernetes workload isolation, and signed release foundations
-- Accessible server-rendered web foundations that preserve human-authority boundaries
+**Prerequisites:** Node.js 24 recommended (22 is the minimum declared runtime), npm 11, Docker or a compatible container runtime for PostgreSQL and sandbox checks.
 
-## Architecture
+```bash
+git clone https://github.com/nicholas-ruest/deliberation.git
+cd deliberation
+npm ci --ignore-scripts
+
+npm run build
+npm run quality      # compile, typecheck, architecture, contracts, migrations, security, coverage
+npm run benchmark
+```
+
+Build first, then run each process in its own terminal:
+
+```bash
+npm run start:api
+npm run start:worker
+npm run start:web
+```
+
+| Process | Address | Health endpoints |
+|---|---|---|
+| API | `http://127.0.0.1:3000` in local demo mode | `/health/live`, `/health/ready` |
+| Web | `http://127.0.0.1:3001` | `/health/live`, `/health/ready` |
+| Worker | Background process | `/health/live`, `/health/ready` on `WORKER_HEALTH_PORT` |
+
+The header-based local demo is disabled in production by two independent checks and binds to loopback only when explicitly enabled — do not expose it to an untrusted network:
+
+```bash
+ALLOW_LOCAL_DOMAIN_DEMO=true npm run start:api
+```
+
+<details>
+<summary>📐 <strong>Architecture — bounded contexts, repository layout, integration rules</strong></summary>
 
 The platform is a modular monolith organized around ten bounded contexts. Each context owns its domain model, application services, contracts, persistence schema, and infrastructure adapters. Contexts integrate through published contracts and versioned events; they do not read one another's tables or import implementation internals.
 
@@ -74,7 +94,7 @@ flowchart LR
     C[Commercial Operations] --> SP
 ```
 
-### Bounded contexts
+#### Bounded contexts
 
 | Context | Responsibility |
 |---|---|
@@ -91,7 +111,7 @@ flowchart LR
 
 For binding design rules, read the [domain design](./docs/ddd/README.md), [context map](./docs/ddd/context-map.md), and [aggregate catalog](./docs/ddd/aggregate-catalog.md).
 
-## Repository structure
+#### Repository structure
 
 ```text
 src/
@@ -108,59 +128,10 @@ docs/                      ADRs, domain specifications, evidence, and runbooks
 artifacts/evidence/        Generated local source receipts and release evidence
 ```
 
-## Getting started
+</details>
 
-### Prerequisites
-
-- Node.js 24 recommended; Node.js 22 is the minimum declared runtime
-- npm 11
-- Docker or compatible container runtime for PostgreSQL and sandbox checks
-
-### Install
-
-```bash
-git clone https://github.com/nicholas-ruest/deliberation.git
-cd deliberation
-npm ci --ignore-scripts
-```
-
-### Build and validate
-
-```bash
-npm run build
-npm run quality
-npm run benchmark
-```
-
-`npm run quality` runs compilation, type checking, architecture rules, contract validation, migration safety, security scanning, license policy, deployment checks, prohibited-shortcut controls, tests, and coverage.
-
-### Run locally
-
-Build first, then start each process in a separate terminal:
-
-```bash
-npm run start:api
-npm run start:worker
-npm run start:web
-```
-
-Default endpoints:
-
-| Process | Address | Health endpoints |
-|---|---|---|
-| API | `http://127.0.0.1:3000` in local demo mode | `/health/live`, `/health/ready` |
-| Web | `http://127.0.0.1:3001` | `/health/live`, `/health/ready` |
-| Worker | Background process | Process lifecycle and dependency readiness |
-
-The header-based domain demo is intentionally disabled in production and binds to loopback only when explicitly enabled:
-
-```bash
-ALLOW_LOCAL_DOMAIN_DEMO=true npm run start:api
-```
-
-Do not expose this mode to an untrusted network.
-
-## Quality and verification
+<details>
+<summary>✅ <strong>Quality, CI &amp; security scanning</strong></summary>
 
 | Command | Purpose |
 |---|---|
@@ -182,17 +153,23 @@ CI runs the production-quality sequence against PostgreSQL, executes benchmarks 
 
 Three additional checks cover ground the repository's own scripts do not:
 
-- CodeQL (`.github/workflows/codeql.yml`) runs GitHub's `javascript-typescript` dataflow analysis on every pull request, on pushes to `main`, and weekly. `npm run security:scan` only matches a fixed set of source patterns.
-- The same gate builds each of `Dockerfile.api`, `Dockerfile.web`, and `Dockerfile.worker` and scans the resulting image with Trivy, failing on fixable HIGH or CRITICAL OS-package and library findings. `npm audit` inspects the JavaScript dependency tree only, not what is baked into the image.
-- Dependabot (`.github/dependabot.yml`) opens weekly pull requests for npm dependencies, Dockerfile base images, and GitHub Actions. Nothing auto-merges; each update goes through the same gate as any other change.
+- **CodeQL** (`.github/workflows/codeql.yml`) runs GitHub's `javascript-typescript` dataflow analysis on every pull request, on pushes to `main`, and weekly. `npm run security:scan` only matches a fixed set of source patterns.
+- **Container image scanning** — the same gate builds each of `Dockerfile.api`, `Dockerfile.web`, and `Dockerfile.worker` and scans the resulting image with Trivy, failing on fixable HIGH or CRITICAL OS-package and library findings. `npm audit` inspects the JavaScript dependency tree only, not what is baked into the image.
+- **Dependabot** (`.github/dependabot.yml`) opens weekly pull requests for npm dependencies, Dockerfile base images, and GitHub Actions. Nothing auto-merges; each update goes through the same gate as any other change.
 
-## Security model
+</details>
+
+<details>
+<summary>🔒 <strong>Security model</strong></summary>
 
 Security controls are designed to compose rather than depend on a single perimeter:
 
-- Asymmetric identity verification with strict issuer, audience, lifetime, session epoch, and replay checks
+- Asymmetric identity verification (Ed25519) with strict issuer, audience, lifetime, session-epoch, and replay checks — replay state is Postgres-backed, so it holds under any number of replicas rather than one process's memory
+- Postgres-backed, per-principal rate limiting on the authenticated API, correct across replicas for the same reason
 - Server-side policy evaluation using tenant, principal, purpose, resource, risk, consent, and obligations
-- Context-owned PostgreSQL schemas, runtime roles, row-level security, and optimistic concurrency
+- Context-owned PostgreSQL schemas, least-privilege runtime roles (`SET LOCAL ROLE` per transaction), row-level security, and optimistic concurrency
+- Bounded request schemas — every array and free-text field has an upper limit, closing cheap algorithmic-complexity abuse within the body-size cap
+- Rejection responses carry a stable error code only; the specific denial reason is recorded server-side (telemetry + correlation-ID-keyed log) rather than returned to the caller
 - Opaque cell/tenant object partitions with AES-256-GCM authenticated encryption and wrapped data keys
 - Default-deny dependency qualification, immutable versions, post-call requalification, and quarantine fencing
 - Short-lived audience-bound Kubernetes workload tokens and default-deny network policy
@@ -203,13 +180,19 @@ Security controls are designed to compose rather than depend on a single perimet
 
 Please do not report sensitive vulnerabilities in a public issue. Use the repository owner's private security reporting channel when available.
 
-## Data governance
+</details>
+
+<details>
+<summary>🗄️ <strong>Data governance</strong></summary>
 
 The canonical system of record is PostgreSQL. Search, caches, vector indexes, and projections are rebuildable and never authoritative. Large immutable artifacts are referenced through opaque hashes and encrypted object-store metadata.
 
 Consent withdrawal immediately restricts matching processing. Physical deletion, key destruction, projection removal, backup expiry, learning-cohort exclusion, and lawful exceptions are coordinated through an auditable erasure workflow. Legal holds prevent physical deletion but do not restore access.
 
-## Deployment model
+</details>
+
+<details>
+<summary>☸️ <strong>Deployment model — Kubernetes cells, Kustomize overlays</strong></summary>
 
 Production is designed as independently operated regional Kubernetes cells. Each cell has explicit tenant placement, workload identities, private data-plane endpoints, queue and workflow dependencies, encryption keys, quotas, telemetry, and a bounded failure budget.
 
@@ -223,7 +206,7 @@ Repository deployment assets include:
 
 Infrastructure definitions are release inputs, not permission to deploy. Production promotion requires independent authorization and environment-qualified evidence.
 
-### Kustomize base and example overlays
+#### Kustomize base and example overlays
 
 `config/kustomize/base` references the manifests in `config/kubernetes` without duplicating them. Named example overlays render one environment each:
 
@@ -239,7 +222,10 @@ Cluster provisioning, regional cell placement, workload identity bindings (`CELL
 
 See the [cell deployment runbook](./docs/runbooks/deploy-a-cell.md) for the steps an adopter owns.
 
-## Production readiness
+</details>
+
+<details>
+<summary>🚦 <strong>Production readiness</strong></summary>
 
 Passing local CI is necessary but not sufficient for a production claim. The following evidence must be captured in the intended environment:
 
@@ -252,9 +238,12 @@ Passing local CI is necessary but not sufficient for a production claim. The fol
 - Multi-controller release authorization, canary, signed rollback, rollback-health, and protection-drift tests
 - Browser security, automated WCAG 2.2 AA, keyboard, screen-reader, zoom, contrast, reduced-motion, and comprehension reviews
 
-The detailed evidence boundary for ADR-026 through ADR-032 is documented in [prompts-026-032.md](./docs/implementation/prompts-026-032.md). ADR-033's runtime-wiring evidence and remaining external gates are documented in [prompt-033.md](./docs/implementation/prompt-033.md).
+The detailed evidence boundary for ADR-026 through ADR-032 is documented in [prompts-026-032.md](./docs/implementation/prompts-026-032.md). ADR-033's runtime-wiring evidence and remaining external gates are documented in [prompt-033.md](./docs/implementation/prompt-033.md). ADR-034 closes the multi-replica and attack-surface gaps that validation surfaced — see the [decision record](./docs/adr/ADR-034-close-multi-replica-and-attack-surface-gaps-in-the-wired-runtime.md) for what changed and what remains environment-qualified.
 
-## Releases and versioning
+</details>
+
+<details>
+<summary>🏷️ <strong>Releases and versioning</strong></summary>
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and records every notable change in [CHANGELOG.md](./CHANGELOG.md) using the Keep a Changelog format. Commits follow Conventional Commits, so a changelog entry is written from the commits it summarizes rather than generated as prose.
 
@@ -276,7 +265,10 @@ cosign verify \
 
 The resulting digests are what `RELEASE_API_IMAGE_DIGEST`, `RELEASE_WEB_IMAGE_DIGEST`, and `RELEASE_WORKER_IMAGE_DIGEST` expect. No tag has been cut and no image has been published yet; the pipeline is defined but has not been run.
 
-## Documentation
+</details>
+
+<details>
+<summary>📚 <strong>Documentation index</strong></summary>
 
 | Resource | Description |
 |---|---|
@@ -292,9 +284,13 @@ The resulting digests are what `RELEASE_API_IMAGE_DIGEST`, `RELEASE_WEB_IMAGE_DI
 | [Prompts 01–18 evidence](./docs/implementation/prompts-01-18.md) | Core platform implementation increments |
 | [Prompts 026–032 evidence](./docs/implementation/prompts-026-032.md) | Regional production and web foundations |
 | [Prompt 033 evidence](./docs/implementation/prompt-033.md) | Runtime wiring: persistence, identity, telemetry, worker |
+| [ADR-034](./docs/adr/ADR-034-close-multi-replica-and-attack-surface-gaps-in-the-wired-runtime.md) | Multi-replica replay/rate-limit correctness and attack-surface hardening |
 | [Runbooks](./docs/runbooks/stuck-workflow.md) | Operational diagnosis and repair procedures |
 
-## Contributing
+</details>
+
+<details>
+<summary>🤝 <strong>Contributing</strong></summary>
 
 Changes must preserve bounded-context ownership, public contracts, tenant isolation, human authority, provenance, idempotency, and release evidence.
 
@@ -316,6 +312,8 @@ docs(scope): describe the documentation update
 ```
 
 Do not commit credentials, `.env` files, generated secrets, or provider tokens. Do not add `Co-Authored-By` attribution unless the repository explicitly configures and authorizes it.
+
+</details>
 
 ## License
 
