@@ -1,11 +1,11 @@
-FROM node:24.14.0-alpine3.23@sha256:2c9dfc20be9c57d7409e40b61f4806afbae4d5b5bb6be166a24e3a3a803869a5 AS build
+FROM node:26.6.0-alpine3.23@sha256:b528fccffe400ce6162162f70777bdfcd8439aa1affc2e8e2d66a0db2e018378 AS build
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.build.json ./
 RUN npm ci --ignore-scripts
 COPY src ./src
 RUN npm run build
 
-FROM node:24.14.0-alpine3.23@sha256:2c9dfc20be9c57d7409e40b61f4806afbae4d5b5bb6be166a24e3a3a803869a5
+FROM node:26.6.0-alpine3.23@sha256:b528fccffe400ce6162162f70777bdfcd8439aa1affc2e8e2d66a0db2e018378
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json ./
