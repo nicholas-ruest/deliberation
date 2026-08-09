@@ -238,7 +238,7 @@ Passing local CI is necessary but not sufficient for a production claim. The fol
 - Multi-controller release authorization, canary, signed rollback, rollback-health, and protection-drift tests
 - Browser security, automated WCAG 2.2 AA, keyboard, screen-reader, zoom, contrast, reduced-motion, and comprehension reviews
 
-The detailed evidence boundary for ADR-026 through ADR-032 is documented in [prompts-026-032.md](./docs/implementation/prompts-026-032.md). ADR-033's runtime-wiring evidence and remaining external gates are documented in [prompt-033.md](./docs/implementation/prompt-033.md). ADR-034 closes the multi-replica and attack-surface gaps that validation surfaced — see the [decision record](./docs/adr/ADR-034-close-multi-replica-and-attack-surface-gaps-in-the-wired-runtime.md) for what changed and what remains environment-qualified.
+The detailed evidence boundary for ADR-026 through ADR-032 is documented in [prompts-026-032.md](./docs/implementation/prompts-026-032.md). ADR-033's runtime-wiring evidence and remaining external gates are documented in [prompt-033.md](./docs/implementation/prompt-033.md). ADR-034 closes the multi-replica and attack-surface gaps that validation surfaced — see the [decision record](./docs/adr/ADR-034-close-multi-replica-and-attack-surface-gaps-in-the-wired-runtime.md) for what changed and what remains environment-qualified. ADR-035 through ADR-040 add six further optional dependencies behind this platform's own qualification gate — [prompt-035-040.md](./docs/implementation/prompt-035-040.md) records which are real-but-unqualified, which are scaffolding-only, and why none are yet authorized for production traffic.
 
 </details>
 
@@ -284,6 +284,7 @@ The resulting digests are what `RELEASE_API_IMAGE_DIGEST`, `RELEASE_WEB_IMAGE_DI
 | [Prompts 01–18 evidence](./docs/implementation/prompts-01-18.md) | Core platform implementation increments |
 | [Prompts 026–032 evidence](./docs/implementation/prompts-026-032.md) | Regional production and web foundations |
 | [Prompt 033 evidence](./docs/implementation/prompt-033.md) | Runtime wiring: persistence, identity, telemetry, worker |
+| [Prompts 035–040 evidence](./docs/implementation/prompt-035-040.md) | AgentDB, agentic-flow, federated-mcp, RuLake, SynthLang, RVM — qualification state per dependency |
 | [ADR-034](./docs/adr/ADR-034-close-multi-replica-and-attack-surface-gaps-in-the-wired-runtime.md) | Multi-replica replay/rate-limit correctness and attack-surface hardening |
 | [Runbooks](./docs/runbooks/stuck-workflow.md) | Operational diagnosis and repair procedures |
 

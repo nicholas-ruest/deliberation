@@ -3,6 +3,10 @@
 .swarm/
 agentdb.rvf
 agentdb.rvf.lock
+agentdb.rvf.idmap.json
+*.rvf
+*.rvf.lock
+*.rvf.idmap.json
 ruvector.db
 skills-lock.json
 

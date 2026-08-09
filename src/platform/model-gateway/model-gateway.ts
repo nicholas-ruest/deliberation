@@ -31,6 +31,13 @@ export interface ModelRoute {
   readonly permitsRestrictedData: boolean;
   readonly maximumCostMinorUnits: number;
   readonly priority: number;
+  /**
+   * Whether a caller may send this route a SynthLang-compressed prompt variant
+   * instead of (or in addition to) the original (ADR-039). Compression is a cost
+   * optimization with no first-party meaning-preservation evidence yet, so this
+   * defaults to unset/false; a route only opts in once that evidence exists.
+   */
+  readonly acceptsCompressedPrompt?: boolean;
 }
 
 export interface RoutingPolicy {
@@ -88,24 +95,41 @@ export interface GeneratedArtifact {
 
 const riskOrder: Record<Exclude<ModelRiskTier, 'prohibited'>, number> = { low: 0, moderate: 1, high: 2 };
 
+/**
+ * Proposes a route among candidates ModelGateway has already filtered for
+ * policy compliance (ADR-010). A selector never sees, and cannot propose, a
+ * route outside that pre-filtered set — see ADR-036 and
+ * `agentic-flow-selector.ts` for the reference implementation.
+ */
+export interface ModelSelector {
+  select(candidates: readonly ModelRoute[], request: ModelRequest): ModelRoute | undefined;
+}
+
 export class ModelGateway {
   constructor(
     private readonly policy: RoutingPolicy,
     private readonly providers: ReadonlyMap<string, ModelProviderPort>,
     private readonly eligibility: ModelDependencyEligibility = denyUnqualifiedModelDependencies,
+    private readonly selector?: ModelSelector,
   ) {}
 
   route(request: ModelRequest): Result<ModelRoute> {
-    const route = [...this.policy.routes]
+    const compliant = [...this.policy.routes]
       .filter(({ tasks }) => tasks.includes(request.task))
       .filter(({ regions }) => regions.includes(request.region))
       .filter(({ maximumRiskTier }) => riskOrder[request.riskTier] <= riskOrder[maximumRiskTier])
       .filter(({ permitsRestrictedData }) => !request.containsRestrictedData || permitsRestrictedData)
-      .filter(({ maximumCostMinorUnits }) => maximumCostMinorUnits <= request.maximumCostMinorUnits)
-      .sort((a, b) => b.priority - a.priority)[0];
-    return route === undefined
-      ? { ok: false, error: { code: 'RISK_NOT_SUPPORTED', message: 'No policy-compliant immutable model route exists' } }
-      : { ok: true, value: route };
+      .filter(({ maximumCostMinorUnits }) => maximumCostMinorUnits <= request.maximumCostMinorUnits);
+    if (compliant.length === 0) {
+      return { ok: false, error: { code: 'RISK_NOT_SUPPORTED', message: 'No policy-compliant immutable model route exists' } };
+    }
+    // A selector may only ever narrow the choice to one of `compliant`'s own members.
+    // Anything else it returns (a bug, an unexpected library response) is ignored,
+    // and route selection falls back to the pre-existing static-priority behavior.
+    const proposed = this.selector?.select(compliant, request);
+    const fallback = [...compliant].sort((a, b) => b.priority - a.priority)[0] as ModelRoute;
+    const route = proposed !== undefined && compliant.includes(proposed) ? proposed : fallback;
+    return { ok: true, value: route };
   }
 
   async invoke(request: ModelRequest, outputSchema: z.ZodType): Promise<Result<GeneratedArtifact>> {

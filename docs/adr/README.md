@@ -38,6 +38,12 @@ These proposed ADRs form one coherent production architecture. “Proposed” me
 | [ADR-032](./ADR-032-deliver-an-accessible-human-authority-web-application.md) | Accessible human-authority web application |
 | [ADR-033](./ADR-033-wire-built-capabilities-into-the-runtime-path-with-fail-closed-defaults.md) | Fail-closed runtime wiring for self-hosted operation |
 | [ADR-034](./ADR-034-close-multi-replica-and-attack-surface-gaps-in-the-wired-runtime.md) | Multi-replica replay/rate-limit correctness and attack-surface hardening |
+| [ADR-035](./ADR-035-add-agentdb-as-the-evidence-contexts-vector-memory.md) | AgentDB as the Evidence context's vector memory |
+| [ADR-036](./ADR-036-route-model-requests-through-agentic-flow.md) | agentic-flow as the model gateway's routing engine |
+| [ADR-037](./ADR-037-federate-the-mcp-gateway-through-federated-mcp.md) | federated-mcp for multi-server MCP federation |
+| [ADR-038](./ADR-038-front-vector-reads-with-rulake.md) | RuLake as a qualified vector-cache dependency |
+| [ADR-039](./ADR-039-compress-prompts-through-synthlang.md) | SynthLang as a qualified prompt-compression dependency |
+| [ADR-040](./ADR-040-run-connector-and-worker-execution-inside-rvm.md) | RVM as a qualified sandboxed execution substrate |
 
 ## Decision policy
 

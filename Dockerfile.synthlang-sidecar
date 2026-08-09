@@ -1,0 +1,14 @@
+# SynthLang prompt-compression sidecar (ADR-039). This is an optional, qualified external
+# dependency (see docs/adr/ADR-039-compress-prompts-through-synthlang.md) — nothing in the
+# main api/worker/web images depends on this image being built or running. It requires its
+# own adopter-supplied OPENAI_API_KEY at runtime and fails closed (503) without one.
+FROM python:3.12-slim@sha256:229a2c5bfa27522db7815ea81f9bed70af17ccb9de9fc7ad142b1877b5830d36 AS runtime
+WORKDIR /app
+COPY scripts/synthlang-sidecar/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY scripts/synthlang-sidecar/server.py ./
+RUN useradd --uid 10001 --no-create-home sidecar
+USER 10001:10001
+ENV PORT=8137
+EXPOSE 8137
+CMD ["python", "server.py"]
