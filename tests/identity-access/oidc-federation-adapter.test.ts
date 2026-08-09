@@ -226,7 +226,7 @@ describe('OidcFederationAdapter rejection paths (ADR-050)', () => {
       { provider: 'p', issuer: 'http://127.0.0.1:1', allowInsecureIssuerTransport: true },
       { requestTimeoutMs: 250 },
     );
-    const result = await unreachable.validate(signAssertion(signingKey, validClaims()), AUDIENCE, NOW);
+    const result = await unreachable.validate(signAssertion(signingKey, validClaims({ iss: 'http://127.0.0.1:1' })), AUDIENCE, NOW);
     expect(result.ok).toBe(false);
     expect(!result.ok && result.error.code).toBe('DEPENDENCY_UNAVAILABLE');
   });
@@ -238,7 +238,7 @@ describe('OidcFederationAdapter rejection paths (ADR-050)', () => {
     impostor.issuer = 'https://somewhere-else.test';
     const result = await new OidcFederationAdapter(
       { provider: 'p', issuer: real, allowInsecureIssuerTransport: true },
-    ).validate(signAssertion(signingKey, validClaims()), AUDIENCE, NOW);
+    ).validate(signAssertion(signingKey, validClaims({ iss: real })), AUDIENCE, NOW);
     expect(!result.ok && result.error.details?.['reasonCode']).toBe('jwks_unavailable');
     await impostor.stop();
   });

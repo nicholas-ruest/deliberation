@@ -2,8 +2,11 @@
 #
 # This file exists so `tests/identity-access/oidc-federation-adapter-dex.test.ts` can obtain a
 # real, real-key-signed OIDC ID token from a real identity provider instead of a hand-built
-# fixture. It is never used by any runtime path, any deployment overlay, or any image build:
-# the only consumers are that test and the "Start Dex" step in .github/workflows/quality.yml.
+# fixture. It is never used by any runtime path, any deployment overlay, or any image build: the
+# only consumer is that test, which starts and tears down its own throwaway Dex container (see
+# `docker run` in its `beforeAll`/`afterAll`) — there is no separate CI service step to keep in
+# sync with it. Gated behind `OIDC_LIVE_IDP_CONTRACT=1`, the same opt-in pattern ADR-046's live
+# federated-mcp contract test uses, so it skips cleanly wherever Docker isn't available.
 #
 # Every credential below is a public, test-only value. Nothing here is, or may become, a
 # production credential — an adopter federating this platform supplies their own issuer and
