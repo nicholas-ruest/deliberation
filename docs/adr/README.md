@@ -44,6 +44,16 @@ These proposed ADRs form one coherent production architecture. “Proposed” me
 | [ADR-038](./ADR-038-front-vector-reads-with-rulake.md) | RuLake as a qualified vector-cache dependency |
 | [ADR-039](./ADR-039-compress-prompts-through-synthlang.md) | SynthLang as a qualified prompt-compression dependency |
 | [ADR-040](./ADR-040-run-connector-and-worker-execution-inside-rvm.md) | RVM as a qualified sandboxed execution substrate |
+| [ADR-041](./ADR-041-hold-supply-chain-blocked-dependencies-at-qualifying-not-eligible.md) | Standing policy: supply-chain-blocked dependencies stay at `qualifying`, never silently shipped or silently blocked |
+| [ADR-042](./ADR-042-formal-risk-acceptance-path-for-agentdb-and-agentic-flow.md) | Formal risk-acceptance / clean-upgrade path for AgentDB and agentic-flow |
+| [ADR-043](./ADR-043-recheck-artifactless-dependencies-on-a-schedule.md) | Scheduled re-check for RuLake/RVM instead of a one-time finding |
+| [ADR-044](./ADR-044-evaluate-synthlang-compression-before-eligibility.md) | Held-out evaluation gate for SynthLang before eligibility |
+| [ADR-045](./ADR-045-execute-and-verify-the-release-pipeline-for-real.md) | Execute and verify the release pipeline for real |
+| [ADR-046](./ADR-046-verify-federated-mcp-against-a-live-instance.md) | Verify federated-mcp's contract against a live instance |
+| [ADR-047](./ADR-047-add-load-soak-and-chaos-testing.md) | Load, soak, and chaos testing |
+| [ADR-048](./ADR-048-evaluate-slos-and-alerts-at-runtime.md) | Evaluate SLOs and alerts at runtime, not just declare them |
+| [ADR-049](./ADR-049-discover-worker-tenants-from-identity-access-not-a-static-list.md) | Dynamic worker tenant discovery from Identity & Access |
+| [ADR-050](./ADR-050-build-a-reference-oidc-federation-adapter-tested-against-a-real-idp.md) | Reference OIDC federation adapter tested against a real IdP |
 
 ## Decision policy
 

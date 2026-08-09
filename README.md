@@ -161,7 +161,7 @@ Six dependencies extend specific bounded contexts, each behind this platform's o
 
 Three of the six (AgentDB, agentic-flow, SynthLang) are real, installed, and exercised in tests — they are held back by evidence gaps, not missing code. Two (RuLake, RVM) have no runnable artifact anywhere to integrate against yet. Adding AgentDB/agentic-flow also surfaced a real, now-fixed gap: their dependency trees carry `npm audit` HIGH findings and one undeclared-but-verified-MIT transitive license (`pipenet`, documented in `scripts/check-licenses.ts`).
 
-Full qualification-state detail and evidence: [prompt-035-040.md](./docs/implementation/prompt-035-040.md).
+Full qualification-state detail and evidence: [prompt-035-040.md](./docs/implementation/prompt-035-040.md). The standing policy behind "held at `qualifying`, not `eligible`" — what happens when a dependency has a real, automated-gate-confirmed finding against it — is [ADR-041](./docs/adr/ADR-041-hold-supply-chain-blocked-dependencies-at-qualifying-not-eligible.md).
 
 </details>
 
@@ -320,6 +320,7 @@ The resulting digests are what `RELEASE_API_IMAGE_DIGEST`, `RELEASE_WEB_IMAGE_DI
 | [Prompts 026–032 evidence](./docs/implementation/prompts-026-032.md) | Regional production and web foundations |
 | [Prompt 033 evidence](./docs/implementation/prompt-033.md) | Runtime wiring: persistence, identity, telemetry, worker |
 | [Prompts 035–040 evidence](./docs/implementation/prompt-035-040.md) | AgentDB, agentic-flow, federated-mcp, RuLake, SynthLang, RVM — qualification state per dependency |
+| [ADR-041](./docs/adr/ADR-041-hold-supply-chain-blocked-dependencies-at-qualifying-not-eligible.md) | Standing policy for a dependency with a real supply-chain finding against it |
 | [ADR-034](./docs/adr/ADR-034-close-multi-replica-and-attack-surface-gaps-in-the-wired-runtime.md) | Multi-replica replay/rate-limit correctness and attack-surface hardening |
 | [Runbooks](./docs/runbooks/stuck-workflow.md) | Operational diagnosis and repair procedures |
 

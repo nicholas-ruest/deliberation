@@ -1,0 +1,24 @@
+name: artifact-availability
+# ADR-043: re-checks whether RuLake/RVM have published a runnable artifact. Weekly, like
+# Dependabot (ADR-034 item 6), not per PR: it reads external state that has no reason to change
+# between commits, and a flaky external API must not block unrelated work.
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  artifact-availability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run artifact-availability:check
+        env:
+          GH_TOKEN: ${{ github.token }}

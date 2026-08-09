@@ -1,0 +1,54 @@
+# TEST-ONLY Dex configuration (ADR-050).
+#
+# This file exists so `tests/identity-access/oidc-federation-adapter-dex.test.ts` can obtain a
+# real, real-key-signed OIDC ID token from a real identity provider instead of a hand-built
+# fixture. It is never used by any runtime path, any deployment overlay, or any image build:
+# the only consumers are that test and the "Start Dex" step in .github/workflows/quality.yml.
+#
+# Every credential below is a public, test-only value. Nothing here is, or may become, a
+# production credential — an adopter federating this platform supplies their own issuer and
+# their own client registration (ADR-033, unchanged by ADR-050).
+issuer: http://127.0.0.1:5556/dex
+
+# In-memory storage keeps the container disposable: no volume, no state to clean up between runs.
+storage:
+  type: memory
+
+web:
+  http: 0.0.0.0:5556
+
+logger:
+  level: info
+  format: text
+
+oauth2:
+  # Enables the OAuth2 Resource Owner Password Grant against the local password DB, which is what
+  # lets the test acquire a real ID token without driving a browser.
+  passwordConnector: local
+  skipApprovalScreen: true
+
+expiry:
+  idTokens: 5m
+
+enablePasswordDB: true
+
+staticClients:
+  - id: deliberation-federation-test
+    name: Deliberation federation adapter test
+    secret: dex-test-only-client-secret
+    redirectURIs:
+      - http://127.0.0.1:5556/callback
+  # A second registered client, used only to prove the adapter rejects a token whose audience is
+  # some other legitimately-issued audience at the same issuer.
+  - id: deliberation-federation-other-audience
+    name: Deliberation federation adapter test (wrong audience)
+    secret: dex-test-only-other-client-secret
+    redirectURIs:
+      - http://127.0.0.1:5556/callback
+
+staticPasswords:
+  # bcrypt hash of the literal string "dex-test-only-password".
+  - email: federation-user@deliberation.test
+    hash: "$2b$10$lr9hMYgVRBWOQGBmAnuWeOz1qXob6pl/E0zlOqL.fnfpP8Eg..tNC"
+    username: federation-user
+    userID: 6e1f8b62-5b4a-4e0e-9c3f-2a7c6f0c9a11

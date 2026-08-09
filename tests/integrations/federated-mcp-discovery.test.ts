@@ -13,6 +13,7 @@ import {
 } from '../../src/integrations/application/index.js';
 import {
   HttpFederatedMcpDiscovery,
+  StaticFederatedMcpDiscovery,
   capabilitySchemaHash,
   type FederationHttpClient,
 } from '../../src/integrations/infrastructure/federated-mcp-discovery.js';
@@ -146,6 +147,39 @@ describe('discovery never grants use', () => {
     const gateway = new ConnectorGateway(registration, { call: async () => ({ hits: [] }) }, allowTestDependencies);
     const result = await gateway.invoke({ ...invocation, schemaHash: rediscovered }, allowPolicy, outputSchema);
     expect(!result.ok && result.error.code).toBe('PERMISSION_DENIED');
+  });
+});
+
+describe('operator-supplied federation discovery (ADR-046 fallback)', () => {
+  it('drives the same registration flow from a hand-maintained server list, with no HTTP at all', async () => {
+    const discovery = new StaticFederatedMcpDiscovery([descriptor]);
+
+    const catalog = await registerDiscoveredFederation(discovery, () => provisioning, clock);
+    expect(catalog.ok).toBe(true);
+    if (!catalog.ok) return;
+
+    const registration = catalog.value.registered[0];
+    expect(registration?.id).toBe('connector-search');
+    // Operator-supplied still means discovered-not-approved: nothing became callable.
+    expect(registration?.state).toBe('registered');
+  });
+
+  it('still skips a listed server whose endpoint identity does not match the operator pin', async () => {
+    const discovery = new StaticFederatedMcpDiscovery([
+      { ...descriptor, serverId: 'drifted', endpointIdentity: 'sha256:rotated-endpoint' },
+    ]);
+
+    const catalog = await registerDiscoveredFederation(discovery, () => provisioning, clock);
+    expect(catalog.ok && catalog.value.registered).toEqual([]);
+    expect(catalog.ok && catalog.value.skippedServerIds).toEqual(['drifted']);
+  });
+
+  it('reports an unknown server rather than inventing capabilities for it', async () => {
+    const discovery = new StaticFederatedMcpDiscovery([descriptor]);
+
+    expect((await discovery.listCapabilities('federated-search')).ok).toBe(true);
+    const missing = await discovery.listCapabilities('absent');
+    expect(!missing.ok && missing.error.code).toBe('NOT_FOUND');
   });
 });
 

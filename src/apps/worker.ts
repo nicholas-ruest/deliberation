@@ -12,13 +12,22 @@ const healthPort = Number.parseInt(process.env['WORKER_HEALTH_PORT'] ?? '3001', 
 const pollIntervalMs = Number.parseInt(process.env['WORKER_POLL_INTERVAL_MS'] ?? '1000', 10);
 const relayBatchSize = Number.parseInt(process.env['WORKER_RELAY_BATCH_SIZE'] ?? '100', 10);
 const staleAfterMs = Number.parseInt(process.env['WORKER_STALE_AFTER_MS'] ?? '60000', 10);
+const tenantDiscoveryIntervalMs = Number.parseInt(process.env['WORKER_TENANT_DISCOVERY_INTERVAL_MS'] ?? '60000', 10);
 
 // Reference consumer, not a production fabric (see ADR-028): this worker relays the outbox for
-// an explicit, operator-configured set of tenants. It intentionally does not attempt cross-tenant
-// discovery — every outbox table is row-level-security protected per tenant, and this process
-// authenticates as an ordinary application role with no RLS bypass. A managed queue/broker
-// adapter (ADR-028) remains the upgrade path for automatic multi-tenant fan-out.
-const tenantIds = (process.env['WORKER_TENANT_IDS'] ?? '')
+// a bounded set of tenants, not a fully managed multi-tenant fan-out. A managed queue/broker
+// adapter (ADR-028) remains the upgrade path for automatic scale-out.
+//
+// WORKER_TENANT_IDS, when set, is an explicit override: the worker relays exactly that fixed
+// list forever and never calls discovery, which stays the simpler, correct choice for a
+// single-tenant or small fixed-tenant-count deployment (ADR-049). Left unset, the worker
+// discovers active tenants itself via identity_access.list_active_tenant_ids() — a narrow
+// SECURITY DEFINER function (migration 0006) that a dedicated, minimal
+// deliberation_worker_discovery_runtime role may call and nothing else: it cannot SELECT the
+// underlying table directly, read any other schema, or do anything but enumerate active tenant
+// IDs. Every actual outbox read/write still goes through the existing per-context
+// SET LOCAL ROLE + tenant-scoped transaction below, unchanged.
+const explicitTenantIds = (process.env['WORKER_TENANT_IDS'] ?? '')
   .split(',')
   .map((value) => value.trim())
   .filter((value) => value.length > 0);
@@ -30,9 +39,45 @@ const unitOfWork = new PostgresUnitOfWork(pool);
 const telemetryHandle = bootstrapTelemetry({ serviceName: 'deliberation-worker', serviceVersion: SERVICE_VERSION });
 const telemetry = new Telemetry();
 
-if (tenantIds.length === 0) {
-  console.warn('WORKER_TENANT_IDS is empty — this worker is running with nothing to relay. ' +
-    'Set a comma-separated list of tenant UUIDs to relay outbox events for.');
+let activeTenantIds: readonly string[] = explicitTenantIds;
+let lastTenantDiscoveryAt = 0;
+
+if (explicitTenantIds.length === 0) {
+  console.warn('WORKER_TENANT_IDS is not set — relying on tenant discovery '
+    + `(identity_access.list_active_tenant_ids(), refreshed every ${tenantDiscoveryIntervalMs}ms).`);
+}
+
+/**
+ * A tenant that transitions out of `active` stops being relayed for on the next discovery cycle,
+ * not immediately — a bounded staleness window consistent with the outbox's own eventual-
+ * consistency posture (ADR-004), not a new correctness concern.
+ */
+async function discoverActiveTenantIds(): Promise<readonly string[]> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const setRoleSql = `SET LOCAL ROLE ${contextRuntimeRole('worker_discovery')}`;
+    await client.query(setRoleSql);
+    const result = await client.query<{ list_active_tenant_ids: string }>('SELECT * FROM identity_access.list_active_tenant_ids()');
+    await client.query('COMMIT');
+    return result.rows.map((row) => row.list_active_tenant_ids);
+  } catch (cause) {
+    await client.query('ROLLBACK').catch(() => undefined);
+    throw cause;
+  } finally {
+    client.release();
+  }
+}
+
+async function refreshActiveTenantIds(): Promise<void> {
+  if (explicitTenantIds.length > 0) return;
+  if (Date.now() - lastTenantDiscoveryAt < tenantDiscoveryIntervalMs) return;
+  try {
+    activeTenantIds = await discoverActiveTenantIds();
+    lastTenantDiscoveryAt = Date.now();
+  } catch (cause) {
+    console.error(`Tenant discovery failed; keeping the previous tenant set: ${cause instanceof Error ? cause.message : String(cause)}`);
+  }
 }
 
 // Readiness/liveness watermark: a worker that reports healthy while its poll loop has stalled
@@ -91,7 +136,8 @@ process.once('SIGTERM', () => controller.abort());
 process.once('SIGINT', () => controller.abort());
 
 while (!controller.signal.aborted) {
-  for (const tenantId of tenantIds) {
+  await refreshActiveTenantIds();
+  for (const tenantId of activeTenantIds) {
     for (const schema of CONTEXT_SCHEMAS) {
       try {
         await telemetry.operation(

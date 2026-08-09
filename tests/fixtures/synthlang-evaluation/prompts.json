@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "origin": "synthetic-hand-constructed",
+    "honestly": "These prompts are NOT derived from real production usage. No GeneratedArtifact.promptTemplateHash history exists for this platform yet, so ADR-044 step 1's preferred source ('recorded promptTemplateHash history where available') is unavailable. This is the ADR's explicit fallback: a curated fixture set. It was written by hand to cover every ModelTask value and every ADR-005 EpistemicClass, not sampled from traffic, so a pass here bounds compression quality over prompt SHAPES this platform plausibly issues -- it does not establish coverage over the real prompt DISTRIBUTION. Replace this file with a distribution-sampled set once artifact history exists; ADR-044's own Consequences section already names an unrepresentative fixture as the main threat to the gate's validity.",
+    "heldOut": "Held-out in ADR-044's sense: nothing in this set was used to tune, prompt-engineer, or select the SynthLang compression step or its instructions. It exists only to be measured against.",
+    "anchors": "Each entry's mustPreserve list is the deterministic content-preservation signal (ADR-009's verifier-first precedence, and the founding research's warning that a cheap LLM judge is a negative selector). An anchor is a literal span whose loss would change what the prompt asserts or asks for: identifiers, dates, amounts, jurisdictions, negations, enum values, and required output keys. Every anchor must appear verbatim (whitespace- and case-normalized) in its own prompt text; the loader rejects the file otherwise."
+  },
+  "prompts": [
+    {
+      "id": "gen-decision-brief",
+      "task": "generation",
+      "epistemicClass": "observed-fact",
+      "prompt": "Draft a decision brief for deliberation record DR-4471. The recorded facts are: the programme spent EUR 1,240,000 against an approved ceiling of EUR 1,500,000 between 2026-01-01 and 2026-07-14; all processing occurred in region EU-1; no personal data left EU-1. Summarize only what is recorded above. Do not infer a cause for the underspend.",
+      "mustPreserve": ["DR-4471", "EUR 1,240,000", "EUR 1,500,000", "2026-07-14", "EU-1", "Do not infer"]
+    },
+    {
+      "id": "gen-dissent-summary",
+      "task": "generation",
+      "epistemicClass": "user-assertion",
+      "prompt": "Summarize the dissent recorded against option B. Reviewer Priya Raghavan states that she does not accept the vendor's latency figures and that her objection is not withdrawn by the 2026-06-30 revision. Attribute every statement to Priya Raghavan; do not present her assertions as established fact.",
+      "mustPreserve": ["option B", "Priya Raghavan", "does not accept", "not withdrawn", "2026-06-30", "do not present"]
+    },
+    {
+      "id": "gen-external-claim-restatement",
+      "task": "generation",
+      "epistemicClass": "external-claim",
+      "prompt": "Restate the supplier's compliance claim for the record. The supplier asserts conformance with ISO 42001 clause 6.2, certified 2025-11-03 by an accredited body it has not named. This claim is unverified by us. Preserve the words 'asserts' and 'unverified' in your restatement.",
+      "mustPreserve": ["ISO 42001", "clause 6.2", "2025-11-03", "has not named", "asserts", "unverified"]
+    },
+    {
+      "id": "gen-forecast-narrative",
+      "task": "generation",
+      "epistemicClass": "estimate",
+      "prompt": "Write a short narrative around the following estimate: demand is projected to rise 18% in Q4 2026, with a stated 80% interval of 9% to 27%. Label the figure as an estimate, never as an outcome, and carry the interval alongside the point value everywhere it appears.",
+      "mustPreserve": ["18%", "Q4 2026", "80% interval", "9% to 27%", "as an estimate"]
+    },
+    {
+      "id": "gen-assumption-log",
+      "task": "generation",
+      "epistemicClass": "assumption",
+      "prompt": "Produce an assumption log entry. The plan assumes no more than 3 concurrent tenant migrations and assumes the 180 day retention window is unchanged. Mark each line as an assumption that has not been validated, and list what evidence would falsify it.",
+      "mustPreserve": ["assumes", "no more than 3", "180 day", "has not been validated", "falsify"]
+    },
+    {
+      "id": "gen-counterfactual",
+      "task": "generation",
+      "epistemicClass": "simulated-result",
+      "prompt": "Describe the simulated counterfactual run with seed 90210: under the simulated policy the queue drained in 41 minutes rather than 96 minutes. State plainly that this is a simulated result and was not observed in production.",
+      "mustPreserve": ["seed 90210", "41 minutes", "96 minutes", "simulated result", "not observed in production"]
+    },
+    {
+      "id": "eval-evidence-grading",
+      "task": "structured-evaluation",
+      "epistemicClass": "observed-fact",
+      "prompt": "Grade each evidence record and return JSON only, with the keys verificationStatus, sourceLocator, and rationale. verificationStatus must be exactly one of verified, unverified, or disputed. A record with no sourceLocator is unverified regardless of how plausible it reads. Return an empty rationale rather than inventing one.",
+      "mustPreserve": ["JSON only", "verificationStatus", "sourceLocator", "rationale", "verified", "unverified", "disputed", "rather than inventing"]
+    },
+    {
+      "id": "eval-safety-triage",
+      "task": "structured-evaluation",
+      "epistemicClass": "external-claim",
+      "prompt": "Triage the inbound request against the tenant's data policy and return JSON with the keys decision and obligations. The request carries restricted data for tenant t-8830 in region eu-1. Restricted data must not be routed outside eu-1 and must not be used for training. decision must be one of allow, deny, or escalate.",
+      "mustPreserve": ["decision", "obligations", "restricted", "t-8830", "eu-1", "must not be routed outside", "must not be used for training", "allow, deny, or escalate"]
+    },
+    {
+      "id": "eval-calibration-check",
+      "task": "structured-evaluation",
+      "epistemicClass": "estimate",
+      "prompt": "Evaluate the calibration of the attached forecasts and return JSON with the keys brierScore, meanPredicted, and observedRate. Report brierScore to 4 decimal places. A cohort smaller than 30 pairs is insufficient: return the key insufficientCohort set to true instead of a score.",
+      "mustPreserve": ["brierScore", "meanPredicted", "observedRate", "4 decimal places", "smaller than 30", "insufficientCohort"]
+    },
+    {
+      "id": "eval-abstention",
+      "task": "structured-evaluation",
+      "epistemicClass": "model-inference",
+      "prompt": "Score the candidate answer and return JSON with the keys verdict, confidence, and abstained. If the supplied evidence does not settle the question, set abstained to true and verdict to null. Abstention is a correct outcome here and is preferred over a low confidence guess.",
+      "mustPreserve": ["verdict", "confidence", "abstained", "does not settle", "true", "null", "preferred over"]
+    },
+    {
+      "id": "embed-evidence-chunk",
+      "task": "embedding",
+      "epistemicClass": "observed-fact",
+      "prompt": "Deliberation record DR-4471, captured 2026-07-14 from source locator s3://evidence/eu-1/dr-4471.pdf, page 12: the migration completed at 03:41 UTC with zero rolled back transactions.",
+      "mustPreserve": ["DR-4471", "2026-07-14", "s3://evidence/eu-1/dr-4471.pdf", "page 12", "03:41 UTC", "zero rolled back"]
+    },
+    {
+      "id": "embed-policy-clause",
+      "task": "embedding",
+      "epistemicClass": "external-claim",
+      "prompt": "Regulation clause under Article 22: a data subject has the right not to be subject to a decision based solely on automated processing which produces legal effects concerning them or similarly significantly affects them.",
+      "mustPreserve": ["Article 22", "right not to be subject", "solely on automated processing", "legal effects"]
+    },
+    {
+      "id": "rerank-retrieval-candidates",
+      "task": "reranking",
+      "epistemicClass": "observed-fact",
+      "prompt": "Rank these retrieved passages for the query 'retention window for restricted tenant data in eu-1'. Only passages scoped to region eu-1 are eligible; a passage stating a 180 days retention window outranks one stating retention is unspecified. Discard any passage from another tenant entirely rather than ranking it last.",
+      "mustPreserve": ["eu-1", "retention", "180 days", "unspecified", "another tenant", "Discard"]
+    },
+    {
+      "id": "rerank-dissent-evidence",
+      "task": "reranking",
+      "epistemicClass": "user-assertion",
+      "prompt": "Rank the supporting material for the objection filed 2026-06-30 by Priya Raghavan against option B. Material that the objector herself cited ranks above material added later by other reviewers, and material that contradicts the objection must still be returned, not dropped.",
+      "mustPreserve": ["2026-06-30", "Priya Raghavan", "option B", "objector herself cited", "must still be returned", "not dropped"]
+    }
+  ]
+}

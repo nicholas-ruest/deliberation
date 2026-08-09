@@ -9,33 +9,43 @@ import type {
 import type { SecretProvider } from '../../platform/security/secret-provider.js';
 
 /**
- * ASSUMED, UNVERIFIED HTTP CONTRACT.
+ * VERIFIED AGAINST A LIVE INSTANCE (ADR-046): federated-mcp exposes NO HTTP discovery surface.
  *
- * `github.com/ruvnet/federated-mcp` is a standalone service, not an importable library: its
- * `package.json` declares no name/version/main/exports, and it ships its own Dockerfile and
- * start.sh. Its committed HTTP server currently answers only `GET /` with the plain-text banner
- * "AI Federation Network Online"; its documented surface (docs/api.md) is the in-process
- * `FederationProxy` API (`registerServer`, `removeServer`, `getConnectedServers`) plus the
- * `FederationConfig` and `MCPCapabilities` types. There is therefore no published read-only HTTP
- * discovery API to code against, and none of the below has been exercised against a live
- * instance.
+ * Verification performed 2026-08-09 against `github.com/ruvnet/federated-mcp` at commit
+ * 486dc9c022a51bea0775e645e206336ee66212de (the repository HEAD, last touched 2024-11-26), run in
+ * a throwaway container built from the upstream tree on `denoland/deno:1.40.2` — the base image
+ * its own committed Dockerfile pins. Findings, from the source and from the running process:
  *
- * This adapter targets a minimal read-only projection of those documented types:
+ *  - `src/apps/deno/server.ts` — the Dockerfile's entrypoint — serves a single handler that is
+ *    literally `return new Response("AI Federation Network Online", { status: 200 })`. It does
+ *    not read the request. Probing the live container confirmed it: `/`, `/federation/servers`,
+ *    `/federation/servers/{id}/tools`, `/info`, `/capabilities`, `/mcp`, `/health` and an
+ *    invented control path all return the same `200 text/plain` banner, under GET, POST, PUT,
+ *    DELETE, OPTIONS and HEAD alike. There is no router, so there is no 404 either.
+ *  - `FederationProxy` (`src/packages/proxy/federation.ts`) is imported only by the upstream
+ *    tests and docs — never by any server entrypoint. Registering a server through it was
+ *    exercised for real in the container: `getConnectedServers()` went from `[]` to
+ *    `["probe-server-1"]`, and the HTTP surface did not change by one byte. Federation state is
+ *    in-process only and is not projected onto HTTP at any path.
+ *  - The only route tables in the tree belong to other deploy targets: the Cloudflare worker
+ *    (`src/worker/index.ts`, `/info` + `/capabilities`, returning static `ServerInfo` booleans,
+ *    not a server or tool list) and the Supabase edge functions (`src/packages/edge/server.ts`).
+ *    Neither is federation discovery and neither is what the Dockerfile runs.
  *
- *   GET {base}/federation/servers
- *     -> 200 { "servers": [ { "serverId": "...",
- *                             "endpointIdentity": "sha256:...",
- *                             "transport": "streamable-http" | "stdio",
- *                             "endpoints": { "control": "wss://...", "data": "https://host/mcp" } } ] }
+ * Consequently ADR-046's fallback applies: HTTP federation discovery is NOT viable against the
+ * current federated-mcp release. Embedding it as an in-process library is not viable either — it
+ * is Deno-only (`.ts` extension imports, `Deno.serve`, an implicit-latest `deno.land/x/djwt`
+ * import), its `package.json` declares no name/version/main/exports, and it is not published to
+ * npm (registry returns 404). The supported path is therefore `StaticFederatedMcpDiscovery`
+ * below: an operator-supplied, hand-maintained server list feeding the same
+ * `registerDiscoveredFederation` flow, which ADR-037 already required to work that way.
  *
- *   GET {base}/federation/servers/{serverId}/tools
- *     -> 200 { "tools": [ { "name": "...",
- *                           "inputSchema": { ... },
- *                           "annotations": { "readOnlyHint": true } } ] }
- *
- * The tools payload is the MCP specification's `tools/list` result shape, which federated-mcp
- * proxies. If a real deployment differs, replace the two path constants and the two zod schemas
- * below; nothing outside this file depends on the wire format.
+ * `HttpFederatedMcpDiscovery` is retained for a future federated-mcp release that grows a real
+ * read-only discovery API, and is deliberately NOT wired to anything. Its paths and schemas below
+ * match no released contract. Pointed at a real instance today it fails closed rather than
+ * misreading the banner: the response is `200` but not JSON, so parsing yields `undefined`, the
+ * zod schema rejects it, and the adapter returns `CONTENT_REJECTED` — asserted for real against
+ * the live container in `tests/integrations/federated-mcp-live-contract.test.ts`.
  *
  * Two properties are deliberately NOT taken from the wire, because a discovered server must not
  * be able to widen its own trust: the schema hash is computed here over canonical JSON rather
@@ -153,6 +163,36 @@ export class HttpFederatedMcpDiscovery implements FederatedMcpDiscoveryPort {
       return { ok: false, error: { code: 'CONTENT_REJECTED', message: 'Federation discovery payload failed validation' } };
     }
     return { ok: true, value: parsed.data };
+  }
+}
+
+/**
+ * The supported federation-discovery path until federated-mcp ships a real discovery API
+ * (ADR-046). The server list comes from operator configuration rather than from the federation
+ * layer, which removes the only untrusted input discovery ever had — but changes nothing else:
+ * `registerDiscoveredFederation` still records capabilities as merely *discovered*, and
+ * `ConnectorGateway.invoke` still refuses them until a human approval binds the schema hash.
+ *
+ * Operators compute `schemaHash` with the exported `capabilitySchemaHash` over the tool's real
+ * input schema, so a hand-maintained entry that drifts from the server's actual schema fails
+ * closed at the gateway instead of silently authorizing the wrong tool.
+ */
+export class StaticFederatedMcpDiscovery implements FederatedMcpDiscoveryPort {
+  private readonly servers: readonly FederatedServerDescriptor[];
+
+  constructor(servers: readonly FederatedServerDescriptor[]) {
+    this.servers = servers;
+  }
+
+  async listServers(): Promise<Result<readonly FederatedServerDescriptor[]>> {
+    return { ok: true, value: this.servers };
+  }
+
+  async listCapabilities(serverId: string): Promise<Result<readonly DiscoveredCapability[]>> {
+    const server = this.servers.find((candidate) => candidate.serverId === serverId);
+    return server === undefined
+      ? { ok: false, error: { code: 'NOT_FOUND', message: 'Unknown federated server' } }
+      : { ok: true, value: server.capabilities };
   }
 }
 
