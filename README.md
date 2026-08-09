@@ -36,6 +36,21 @@ Enterprise decision systems often collapse uncertainty into a score, hide dissen
 | Reproducible operations | Model routes, prompts, tools, evidence, artifacts, approvals, and releases are versioned and digest bound. |
 | Fail-closed dependencies | Unknown, expired, drifted, or quarantined providers cannot execute production work. |
 
+## Platform capabilities
+
+- Decision contracts with explicit scope, success criteria, authority, deadlines, risk, and constraints
+- Stakeholder-specific preferences, vetoes, immutable snapshots, and conflict analysis
+- Provenance-bearing evidence with epistemic classification, governed retention, and vector-indexed precedent search
+- Budgeted scenario planning with isolated branch memory and cancellation controls
+- Multi-objective evaluation, Pareto analysis, verification precedence, and typed abstention
+- Decision briefs with citations, assumptions, limitations, dissent, and sensitivity
+- Consent, purpose, policy, human-review, and step-up authorization obligations
+- Contract-first model and connector gateways with schema validation, cost-aware routing, and quarantine fencing
+- Observed-outcome learning with independent promotion, canaries, and rollback
+- Tamper-evident audit, cryptographic erasure workflows, telemetry, SLOs, and release gates
+- Regional cell placement, Kubernetes workload isolation, and signed release foundations
+- Accessible server-rendered web foundations that preserve human-authority boundaries
+
 ## Getting started
 
 **Prerequisites:** Node.js 24 recommended (22 is the minimum declared runtime), npm 11, Docker or a compatible container runtime for PostgreSQL and sandbox checks.
@@ -127,6 +142,26 @@ benchmarks/                Source-bound performance benchmarks
 docs/                      ADRs, domain specifications, evidence, and runbooks
 artifacts/evidence/        Generated local source receipts and release evidence
 ```
+
+</details>
+
+<details>
+<summary>🧩 <strong>Optional dependency integrations (ADR-035–040)</strong></summary>
+
+Six dependencies extend specific bounded contexts, each behind this platform's own dependency-qualification gate (ADR-031): a `ProductionDependency` record must reach `eligible` before anything routes to it in production, and every one below is deliberately held short of that today. None of this is required to run the platform — `npm run start:api`/`start:worker`/`start:web` work identically with zero of these configured.
+
+| Dependency | Extends | Integration | Status |
+|---|---|---|---|
+| [AgentDB](https://github.com/ruvnet/agentdb) | Evidence context search | Real npm dependency; `EvidenceSearchPort` + vector-index adapter, tenant/purpose partitioned | Wired, not production-eligible — unresolved supply-chain findings (below) |
+| [agentic-flow](https://github.com/ruvnet/agentic-flow) | Model gateway routing | Real npm dependency; cost-optimal route selection, constrained to routes the existing policy filter already approved | Wired, not production-eligible — same supply-chain findings |
+| [federated-mcp](https://github.com/ruvnet/federated-mcp) | Connector/MCP gateway | Real service; read-only multi-server discovery feeding ordinary, individually-approved `ConnectorRegistration`s | Wired; discovery never grants use, so it carries no separate qualification gate |
+| [RuLake](https://github.com/ruvnet/RuLake) | Vector-read caching | `VectorCachePort` + a real working in-memory baseline; RuLake's own client is untestable — the project has never published a runnable artifact | Scaffolding only |
+| [SynthLang](https://github.com/ruvnet/SynthLang) | Model-gateway prompt cost | Real PyPI dependency, real local sidecar (`scripts/synthlang-sidecar/`); opt-in per route | Wired, not production-eligible — no meaning-preservation evaluation exists yet |
+| [RVM](https://github.com/ruvnet/rvm) | Worker/connector sandboxing | Interface and a refusal-only adapter; bare-metal Rust with no published binary | Scaffolding only, not wired into any call site |
+
+Three of the six (AgentDB, agentic-flow, SynthLang) are real, installed, and exercised in tests — they are held back by evidence gaps, not missing code. Two (RuLake, RVM) have no runnable artifact anywhere to integrate against yet. Adding AgentDB/agentic-flow also surfaced a real, now-fixed gap: their dependency trees carry `npm audit` HIGH findings and one undeclared-but-verified-MIT transitive license (`pipenet`, documented in `scripts/check-licenses.ts`).
+
+Full qualification-state detail and evidence: [prompt-035-040.md](./docs/implementation/prompt-035-040.md).
 
 </details>
 
